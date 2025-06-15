@@ -1,0 +1,11 @@
+This is the re release of 'Archimedes Chess' or '!Chess' that was previously
+published by David Pilling.
+
+The RISC OS front-end was written by Colin Granville and the back-end chess
+engine is GNU Chess by John Stanbeck and the Free Software Foundation.
+
+This code is released under the terms of the CHESS General Public Licence, a
+copy of which can be found in the file COPYING.
+
+The source code is contained in the sub-directory !Chess.Source. and it was
+compiled using version 31 of the DDE.
