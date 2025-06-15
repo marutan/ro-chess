@@ -1,0 +1,35 @@
+#include "wimp.h"
+typedef enum opt_t
+        {
+        arcisblack=1,
+        arciswhite=2,
+        whiteattop=4,
+        blacksturn=8,
+        comp_moving=16,
+        comp_thinking=32,
+        comp_undo=64,
+        game_started=128,
+        stepmode=256,
+        editmode=512,
+        loading=1024,
+        comp_newgame=2048,
+        dobeep=4096,
+        hintoff=8192
+        }opt_t;
+
+typedef struct def_t
+        {
+        opt_t options;
+        int time;
+        int depth;
+        }def_t;
+
+#define isoption(opt) (def.options & (opt))
+#define toggleoption(opt) (def.options ^= (opt))
+#define setoption(opt) (def.options |= (opt))
+#define clearoption(opt) (def.options &= ~(opt))
+void new_game(void);
+BOOL cancel_compthink(int opt);
+int movetoalg(char *p,int m,int flags);
+extern int SaveCnt;
+extern def_t def;

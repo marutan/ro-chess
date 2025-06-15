@@ -1,0 +1,12 @@
+| chess
+|
+WimpSlot -min 256K -max 256K
+IconSprites <Obey$Dir>.!Sprites
+|
+RMEnsure SharedCLibrary 0.00 RMLoad System:Modules.Clib
+RMEnsure SharedCLibrary 3.50 Error Shared C Library is out of date
+|
+Set Alias$@RunType_700 Run <Obey$Dir>.!Run %%*0
+Set File$Type_700 chess
+set chess$dir <obey$dir>
+Run <chess$dir>.!RunImage %*0

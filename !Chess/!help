@@ -1,0 +1,119 @@
+                        Archimedes Chess
+
+LOADING GAME
+
+Either Double click on chess icon or Double click on chessfile 
+icon. In the latter case the chess program will be entered with 
+the file loaded. If the chess programme is already loaded 
+double clicking on a saved file will load that file.
+
+PLAYING THE GAME
+
+  1) Moving a piece
+
+     When it is your turn, indicated when the player name has a 
+     yellow background, point to the piece and press SELECT. The 
+     selected piece will then have a flashing hilite around it.
+  
+     Point to the place you want to put this piece and press 
+     select.
+
+     If the move is valid the move will be made.
+
+  2) Undoing a move
+
+     Press ADJUST at any time. This will work even when the 
+     computer is thinking.
+
+  3) Forcing the computers move
+
+     Press SELECT while the computer is thinking.
+
+  4) NewGame
+
+     SELECT new game on the main menu
+
+  NOTE the computer will continue to think when the main window 
+  is closed and can be brought back by selecting the chess icon 
+  on the icon bar.
+
+STEPPING THROUGH THE GAME
+
+     Select step through game from the main menu. This will open 
+     a window which looks like the controls of a tape recorder.
+
+     Selecting the Left or Rightmost icon makes the pieces move 
+     through the game in that direction. This can be stopped at 
+     any time by selecting the middle icon.
+
+     Selecting one of the other two icons will move through the 
+     game one move at a time.
+
+     You can return to the game at any time by closing the 
+     window.
+
+     NOTE when stepping through the game the moves are not 
+     hilited
+
+EDITING THE BOARD
+
+     Select edit board from the main menu. This will open a 
+     window showing pieces that can be added to the board.
+     
+     To move a piece already on the board use the same method as 
+     moving a piece in the game.
+
+     To add a piece to the board SELECT the piece in the edit 
+     window, if it is not already selected, point to the square 
+     where you want the piece and press ADJUST. If the addition 
+     of the piece would result in too many pieces of the kind 
+     selected i.e. 9 pawns nothing will happen.
+
+     To remove a piece from the board ensure that no pieces are 
+     hilited in the edit window (if there is point to it and 
+     press ADJUST),point to the piece you want removing and press 
+     ADJUST. You cannot remove the KING from the board.
+
+     To restart the Game close the edit window. The game will 
+     restart with WHITE to play.
+
+SAVING THE GAME
+
+     Select Save Game from main menu and save in usual RISC OS 
+     manner. 
+     
+OPTIONS
+
+     Select Setup on the main menu. This allows the alteration of 
+     the default options.
+
+     These are:
+
+         The time in minutes the computer has to make 60 moves.
+
+         The maximum moves ahead the computer can think.
+
+         Whether the computer is black.
+
+         Whether the computer is white.
+
+         Whether white is at the top of the screen.
+
+         Whether you want the computer to beep when it makes a 
+         move.
+
+         Whether you want the hint to be displayed.
+
+     These options are changed for the duration of the game by 
+     selecting <ok> and can become the default (start up) 
+     settings by selecting <SAVE> The settings determining who is 
+     playing what colour are also saved with a saved file and 
+     will be reinstated when a file is loaded.
+
+PRINTING THE GAME
+
+     A listing of the moves so far can be made either by 
+     selecting print on the main menu or saving the file to a 
+     printer driver icon.
+
+     This Information can also be seen by saving to !Edit

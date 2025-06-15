@@ -1,0 +1,9 @@
+| Boot file for !chess.
+|
+| Note the use of %% that ensures that the substitution happens
+| when the file is run, rather than when this file is obeyed.
+| The Obey$Dir, on the other hand, is substituted when this file is obeyed.
+|
+IconSprites <Obey$Dir>.!Sprites
+Set File$type_700 Chess
+Set Alias$@RunType_700 Run <Obey$Dir>.!Run %%*0

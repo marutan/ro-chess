@@ -1,0 +1,47 @@
+#include <stdio.h>
+#include <stdarg.h>
+#include "wimp.h" 
+#include "wimpt.h"
+#include "os.h"
+#include "messages.h"
+/*************************************************************************/
+int mess_vgeneral(int flags,char *title,char *format,va_list argp)
+{
+os_error err;  
+os_regset reg;
+reg.r[0]=(int)&err;
+reg.r[1]=flags;
+reg.r[2]=(int)title;                
+vsprintf(err.errmess,format,argp);
+os_swi(0x400df,&reg);
+return(reg.r[1]);
+}
+/*************************************************************************/
+int mess_confirm(char *format,...)
+{
+va_list argp;
+char m[200]="";
+char *p;
+va_start(argp,format);
+p=wimpt_programname();
+if (p[0]!=0)
+   sprintf(m,"Message from %s",wimpt_programname());
+else
+   sprintf(m,"Message");
+return(mess_vgeneral(0x13,m,format,argp)==1);
+}
+/*************************************************************************/
+void mess_message(char *format,...)
+{
+va_list argp;
+char m[200]="";
+char *p;
+va_start(argp,format);
+p=wimpt_programname();
+if (p[0]!=0)
+   sprintf(m,"Message from %s",wimpt_programname());
+else
+   sprintf(m,"Message");
+mess_vgeneral(0x10,m,format,argp);
+}
+

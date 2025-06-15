@@ -1,0 +1,9 @@
+#include "wimp.h"
+#define CHESSTYPE 0x700
+
+void main_save(void);
+BOOL main_load(void);
+void main_print(void);
+void load_file(void);
+void runload(char *filename);
+void save_board(void);

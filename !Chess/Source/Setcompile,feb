@@ -1,0 +1,3 @@
+dir <obey$dir>
+k.12 amu chess|m
+set chess$dir <obey$dir>.^.!Chess
