@@ -9,4 +9,5 @@ RMEnsure SharedCLibrary 3.50 Error Shared C Library is out of date
 Set Alias$@RunType_700 Run <Obey$Dir>.!Run %%*0
 Set File$Type_700 chess
 set chess$dir <obey$dir>
+set chess$path <obey$Dir>.
 Run <chess$dir>.!RunImage %*0
