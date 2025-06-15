@@ -1,0 +1,3 @@
+|> l
+link -V -via list -O $.Projects.Chess.!Chess.!RunImage
+squeeze -v $.Projects.Chess.!Chess.!RunImage

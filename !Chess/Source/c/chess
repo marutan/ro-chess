@@ -26,7 +26,7 @@
 #include <time.h>
 
 
-#define Version_string "V1.28 (24th Mar 1991)"
+#define Version_string "V1.29 (03 Jun 1994)"
 
 
 #define computers_turn() (isoption(arciswhite|blacksturn)==arciswhite || \
@@ -317,6 +317,8 @@ void set_data()
                                      
 int i,cnt=GameCnt;
 int topside= (isoption(whiteattop))?white:black;
+
+
 i= ((i=isoption(blacksturn|whiteattop))==blacksturn || i==whiteattop)?0:8;
 ICONS[i].flags=TURNON;
 ICONS[i^8].flags=TURNOFF;
@@ -354,10 +356,11 @@ for (i=0;i<64;i++)
     sprintf(&BOARD[j].data.text[1],"%c%s",color[i]?'b':'w',pname[board[i]]);
            }
     }
-for (i=0,j=0;i<8;i++,j+=6)
+
+for (i=0;i<8;i++)
     {
     ICONS[i+10].data.text[0]=(wt)?'1'+i:'8'-i; 
-    ICONS[18].data.indirecttext.buffer[j]=(wt)?'h'-i:'a'+i;
+    ICONS[97-12+i].data.text[0]=(wt)?'h'-i:'a'+i;
     }
 }
 /*************************************************************************
@@ -854,6 +857,13 @@ while (more)
           {
           wimp_ploticon(&ICONS[i]);
           }
+
+
+      for (i=(97-12);i<(97-12+8);i++)
+          {
+          wimp_ploticon(&ICONS[i]);
+          }
+
       wimp_get_rectangle(r,&more);
       }
 }
