@@ -75,12 +75,12 @@ void set_data(void);
 /*************************************************************************
  *                             FUNCTIONS                                 *
  *************************************************************************/
-int canmove()
+int canmove(void)
 {
 return ((SaveCnt>=0)?((GameList[SaveCnt].flags & (cmate|rep|stale|moves50))==0):TRUE);
 }
 /*************************************************************************/
-void show_result()
+void show_result(void)
 {
 int i=(GameCnt>=0)?GameList[GameCnt].flags & (cmate|rep|stale|moves50):0;
 switch (i)
@@ -191,7 +191,7 @@ sprintf(ICONS[i].data.text,"%2d:%2d:%02d",h,m%60,t%60);
 icon_update(&ICONS[i]);
 }
 /*************************************************************************/
-void changeclocks()
+void changeclocks(void)
 {
 static int time;
 int i=(isoption(blacksturn|whiteattop)==0 || isoption(blacksturn|whiteattop)==(blacksturn|whiteattop))?7:1;
@@ -312,14 +312,14 @@ else
    }
 }
 /*************************************************************************/
-void set_data()
+void set_data(void)
 {
 
 int i,cnt=GameCnt;
 int topside= (isoption(whiteattop))?white:black;
 
-
-i= ((i=isoption(blacksturn|whiteattop))==blacksturn || i==whiteattop)?0:8;
+i=isoption(blacksturn|whiteattop);
+i= (i==blacksturn || i==whiteattop)?0:8;
 ICONS[i].flags=TURNON;
 ICONS[i^8].flags=TURNOFF;
 
@@ -340,7 +340,7 @@ icon_update(&ICONS[9]);
 
 }
 /*************************************************************************/
-void set_board()
+void set_board(void)
 {
 int i,j,wt=isoption(whiteattop);
 
@@ -405,7 +405,7 @@ hilite[h].off=to;
 hilite[h].show=TRUE;
 }
 /*************************************************************************/
-void hilite_stop()
+void hilite_stop(void)
 {
 if (flash)
    {
@@ -428,7 +428,7 @@ hilite_do(0,0);
 /*************************************************************************
  *                          TURN FUNCTIONS                               *
  *************************************************************************/
-void turn_change()
+void turn_change(void)
 {
 hilite_stop();
 toggleoption(blacksturn);
@@ -454,7 +454,7 @@ return(y*8+x);
 /*************************************************************************
  *                       MAIN WINDOW FUNCTIONS                           *
  *************************************************************************/
-void makemove()
+void makemove(void)
 {
 GameRec *game=&GameList[GameCnt];
 int from=movetoicon(game->gmove>>8);
@@ -512,7 +512,7 @@ turn_change();
 set_thinking(2);
 }
 /*************************************************************************/
-void undomove()
+void undomove(void)
 {
 GameRec *game;
 int to;
@@ -622,7 +622,7 @@ switch (comphimode++)
        }
 }
 /*************************************************************************/
-void selectpromote()
+void selectpromote(void)
 {
 dbox d;
 char *p;
@@ -674,7 +674,7 @@ if (d=dbox_new(p),d!=NULL)
    wimp_emask mask;
    mask=event_getmask();
    dbox_showstatic(d);
-   event_setmask(0);
+   event_setmask((wimp_emask) 0);
    switch (dbox_fillin(d))
           {
           case 1: x=rook;
@@ -869,7 +869,7 @@ while (more)
 }
 
 /*************************************************************************/
-void main_updatescreen()
+void main_updatescreen(void)
 {
 wimp_redrawstr r;
 wimpt_noerr(wimp_get_wind_state(main_handle,(wimp_wstate *)&r));
@@ -883,7 +883,7 @@ set_thinking(0);
 event_process();
 }
 /*************************************************************************/
-void showload()
+void showload(void)
 {
 MaxCnt=GameCnt;
 if (GameCnt & 1) clearoption(blacksturn);
@@ -905,7 +905,7 @@ if (computers_turn() && !isoption(stepmode|editmode|comp_moving|comp_thinking) &
    {
    wimp_emask mask;
    mask=event_getmask();
-   event_setmask(0);
+   event_setmask((wimp_emask) 0);
    setoption(comp_thinking|game_started);
    compmoved=chesslib_selectmove(chessevent);
    clearoption(comp_thinking);
@@ -958,7 +958,7 @@ switch (e->e)
 /*************************************************************************
  *                          MENU FUNCTIONS                               *
  *************************************************************************/
-void reverseboard()
+void reverseboard(void)
 {
 toggleoption(whiteattop);
 set_board();
@@ -970,7 +970,7 @@ if (hilite[1].show) hilite_set(1,63-hilite[1].off);
 main_updatescreen();
 }
 /*************************************************************************/
-void clearboard()
+void clearboard(void)
 {
 int i;
 chesslib_newgame();
@@ -994,7 +994,7 @@ set_board();
 main_updatescreen();
 }
 /*************************************************************************/
-void resetboard()
+void resetboard(void)
 {
 static int p[]={4,2,3,5,6,3,2,4};
 int i;
@@ -1063,7 +1063,7 @@ switch (e->e)
        }
 }
 /*************************************************************************/
-void editgame()
+void editgame(void)
 {
 
 win_settitle(main_handle,"Edit Chess Board");
@@ -1110,7 +1110,7 @@ switch (e->e)
                           if (mask)
                              {
                              event_setmask(mask);
-                             mask=0;
+                             mask = (wimp_emask) 0;
                              }
                           save_board();
                           break;
@@ -1119,7 +1119,7 @@ switch (e->e)
                              if (mask==0)
                                 {
                                 mask=event_getmask();
-                                event_setmask(0);
+                                event_setmask((wimp_emask) 0);
                                 }
                              switch (m->i)
                                     {
@@ -1143,7 +1143,7 @@ switch (e->e)
        }
 }
 /*************************************************************************/
-void stepthro()
+void stepthro(void)
 {
 static wimp_w step_handle;
 
@@ -1159,12 +1159,12 @@ openwin(step_handle);
 }
 
 /*************************************************************************/
-void new_game()
+void new_game(void)
 {
 hilite_stop();
 chesslib_newgame();
 save_board();
-def.options=isoption(arcisblack|arciswhite|whiteattop|dobeep|hintoff);
+def.options = (opt_t) isoption(arcisblack|arciswhite|whiteattop|dobeep|hintoff);
 set_board();
 set_data();
 set_thinking(1);
@@ -1192,7 +1192,7 @@ if (i)
 set_data();
 }
 /*************************************************************************/
-void setup()
+void setup(void)
 {
 dbox d;
 int reset;
@@ -1208,7 +1208,7 @@ if (d=dbox_new("setup"),d!=NULL)
    dbox_setnumeric(d,6,isoption(dobeep));
    dbox_setnumeric(d,7,isoption(hintoff));
    dbox_show(d);
-   event_setmask(0);
+   event_setmask((wimp_emask) 0);
    f=dbox_fillin(d);
    event_setmask(i);
    if (f==8 || f==9)
@@ -1302,17 +1302,17 @@ switch (hit[0])
        }
 }
 /*************************************************************************/
-BOOL main_menuon()
+BOOL main_menuon(void)
 {
 return(event_attachmenu(main_handle,main_menu,main_menuproc,0));
 }
 /*************************************************************************/
-BOOL main_menuoff()
+BOOL main_menuoff(void)
 {
 return(event_attachmenu(main_handle,0,0,0));
 }
 /*************************************************************************/
-void set_defaults()
+void set_defaults(void)
 {
 FILE *file;
 if ((file=fopen("<chess$dir>.default","r"))!=0)
@@ -1330,7 +1330,7 @@ chesslib_setdepth(def.depth);
 chesslib_setspeed(def.time);
 }
 /*************************************************************************/
-static void init_mainwin()
+static void init_mainwin(void)
 {
 wimp_wind *w;
 int error;
@@ -1367,7 +1367,7 @@ icon=icon;
 openwin(main_handle);
 }
 /*************************************************************************/
-static void bar_info()
+static void bar_info(void)
 {
 dbox d;
 if (d=dbox_new("progInfo"),d!=NULL)
@@ -1390,7 +1390,7 @@ switch (hit[0])
        }
 }
 /*************************************************************************/
-static void init_bar()
+static void init_bar(void)
 {
 int error;
 if (error=(int)(bar_menu=menu_new("Chess",">Info,Quit")),error!= NULL)
@@ -1403,7 +1403,7 @@ if (error==NULL) werr(1,"No room for baricon");
 /*************************************************************************
  *                           INITIALISE                                  *
  *************************************************************************/
-static void initialise()
+static void initialise(void)
 {
 wimpt_init("Chess");
 res_init("chess");

@@ -24,10 +24,10 @@ typedef struct def_t
         int depth;
         }def_t;
 
-#define isoption(opt) (def.options & (opt))
-#define toggleoption(opt) (def.options ^= (opt))
-#define setoption(opt) (def.options |= (opt))
-#define clearoption(opt) (def.options &= ~(opt))
+#define isoption(opt) (def.options & ((opt_t)(opt)))
+#define toggleoption(opt) (def.options = (opt_t)(def.options ^ (opt)))
+#define setoption(opt) (def.options = (opt_t)(def.options | (opt)))
+#define clearoption(opt) (def.options = (opt_t)(def.options & ~(opt)))
 void new_game(void);
 BOOL cancel_compthink(int opt);
 int movetoalg(char *p,int m,int flags);

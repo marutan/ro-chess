@@ -19,11 +19,11 @@ int savekingmoved[2],savecastld[2];
 /*************************************************************************
  *                            SAVE FUNCTIONS                             *
  *************************************************************************/
-void save_board()
+void save_board(void)
 {
 int *pf=board;
 int *pt=saveboard;
-int i;             
+int i;
 for(i=0;i<64;i++) *pt++ = *pf++;
 pf=color;
 pt=savecolour;
@@ -142,20 +142,20 @@ sending=TRUE;
 return(FALSE);
 }
 /*************************************************************************/
-void main_save()
+void main_save(void)
 {
 wimp_emask i=event_getmask();
-event_setmask(0);
+event_setmask((wimp_emask) 0);
 saveas(CHESSTYPE,savefile,0,save_save,save_send,save_print,0);
 event_setmask(i);
 }
 /*************************************************************************/
-void main_print()
+void main_print(void)
 {
 save_print("",0);
 }
 /*************************************************************************/
-void load_file()
+void load_file(void)
 {
 FILE *file;
 int i;
@@ -166,7 +166,7 @@ file=fopen(savefile,"r");
 fscanf(file,"%d",&GameCnt);
 fscanf(file,"%d %d %x",&def.time,&def.depth,&opt);
 for (i=0;i<=GameCnt;i++)
-    {                                             
+    {
     g=&GameList[i];
     fscanf(file,"%x %x %x %x ",&g->gmove,&g->piece,&g->color,&g->flags);
     fscanf(file,"%x %x",&g->svf,&g->svt);
@@ -215,7 +215,7 @@ if (validfile(filename,CHESSTYPE))
    }
 }
 /*************************************************************************/
-BOOL main_load()
+BOOL main_load(void)
 {
 FILE *file;
 char *filename;
@@ -231,7 +231,7 @@ if (file=fopen(filename,"r"),file!=0)
    {
    fclose(file);
    strcpy(savefile,filename);
-   i=cancel_compthink(loading);   
+   i=cancel_compthink(loading);
    if (!i) load_file();
    }
 xferrecv_insertfileok();
