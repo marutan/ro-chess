@@ -44,23 +44,23 @@ typedef struct hilite_t {
 /*************************************************************************
  *                          GLOBAL VARIABLES                             *
  *************************************************************************/
-wimp_iconflags TURNON, TURNOFF;
-int HILITETIME;
-menu bar_menu;
-menu main_menu;
-wimp_w main_handle;
-wimp_w edit_handle;
-int edit_piece = -1;
+static wimp_iconflags TURNON, TURNOFF;
+static int HILITETIME;
+static menu bar_menu;
+static menu main_menu;
+static wimp_w main_handle;
+static wimp_w edit_handle;
+static int edit_piece = -1;
 def_t def;
-hilite_t hilite[2];
-BOOL flash;
-int MaxCnt;
+static hilite_t hilite[2];
+static BOOL flash;
+static int MaxCnt;
 int SaveCnt = -1;
 
-wimp_icon *BOARD;
-wimp_icon *ICONS;
+static wimp_icon *BOARD;
+static wimp_icon *ICONS;
 
-char pname[][12] = {"space", "pawn",  "knight", "bishop",
+static char pname[][12] = {"space", "pawn",  "knight", "bishop",
                     "rook",  "queen", "king"};
 
 static BOOL main_menuoff(void);

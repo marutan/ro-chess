@@ -10,12 +10,14 @@
 #include "xfersend.h"
 #include <stdio.h>
 #include <string.h>
-char savefile[256] = "Chessfile";
-int sending = 0;
+
 extern int epsquare;
-int saveboard[64], savecolour[64];
-int saverookpos[2][2], saverookmoved[2][2];
-int savekingmoved[2], savecastld[2];
+
+static char savefile[256] = "Chessfile";
+static int sending = 0;
+static int saveboard[64], savecolour[64];
+static int saverookpos[2][2], saverookmoved[2][2];
+static int savekingmoved[2], savecastld[2];
 
 /*************************************************************************
  *                            SAVE FUNCTIONS                             *
