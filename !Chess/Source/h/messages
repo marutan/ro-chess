@@ -1,5 +1,6 @@
 /* messages.h */
 #include <stdarg.h>
-int mess_vgeneral(int flags,char *title,char *format,va_list argp);
-int mess_confirm(char *format,...);
-void mess_message(char *format,...);
+
+int mess_vgeneral(int flags, char *title, char *format, va_list argp);
+int mess_confirm(char *format, ...);
+void mess_message(char *format, ...);
