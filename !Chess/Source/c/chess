@@ -63,17 +63,16 @@ wimp_icon *ICONS;
 char pname[][12] = {"space", "pawn",  "knight", "bishop",
                     "rook",  "queen", "king"};
 
-BOOL main_menuoff(void);
-BOOL main_menuon(void);
-void new_game(void);
-void set_board(void);
-void compmove_do(int called_at, void *handle);
-void set_data(void);
+static BOOL main_menuoff(void);
+static BOOL main_menuon(void);
+static void set_board(void);
+static void compmove_do(int called_at, void *handle);
+static void set_data(void);
 
 /*************************************************************************
  *                             FUNCTIONS                                 *
  *************************************************************************/
-int
+static int
 canmove(void)
 {
   return ((SaveCnt >= 0) ? ((GameList[SaveCnt].flags &
@@ -82,7 +81,7 @@ canmove(void)
 }
 
 /*************************************************************************/
-void
+static void
 show_result(void)
 {
   int i = (GameCnt >= 0)
@@ -104,7 +103,7 @@ show_result(void)
 }
 
 /*************************************************************************/
-int
+static int
 icontomove(int move)
 {
   if (isoption(whiteattop) == 0) {
@@ -147,7 +146,7 @@ openwin(wimp_w handle)
 }
 
 /*************************************************************************/
-void
+static void
 icontoalg(int k, int m, int flags)
 {
   if (m == 0) {
@@ -198,7 +197,7 @@ movetoalg(char *p, int m, int flags)
 }
 
 /*************************************************************************/
-void
+static void
 set_time(int i, int t)
 {
   int h, m;
@@ -209,7 +208,7 @@ set_time(int i, int t)
 }
 
 /*************************************************************************/
-void
+static void
 changeclocks(void)
 {
   static int time;
@@ -225,7 +224,7 @@ changeclocks(void)
 }
 
 /*************************************************************************/
-void
+static void
 writeclocks(int count)
 {
   int t;
@@ -244,7 +243,7 @@ writeclocks(int count)
 }
 
 /*************************************************************************/
-void
+static void
 set_thinking(int set)
 {
   static int best, depth, con;
@@ -288,7 +287,7 @@ set_thinking(int set)
 }
 
 /*************************************************************************/
-char *
+static const char *
 playname(int side)
 {
   if (side) {
@@ -299,7 +298,7 @@ playname(int side)
 }
 
 /*************************************************************************/
-void
+static void
 lasticon(int i, int c)
 {
   if (c < 0) {
@@ -311,7 +310,7 @@ lasticon(int i, int c)
 }
 
 /*************************************************************************/
-void
+static void
 timeicon(int i, int c)
 {
   if (c < 0) {
@@ -323,7 +322,7 @@ timeicon(int i, int c)
 }
 
 /*************************************************************************/
-void
+static void
 set_data(void)
 {
 
@@ -352,7 +351,7 @@ set_data(void)
 }
 
 /*************************************************************************/
-void
+static void
 set_board(void)
 {
   int i, j, wt = isoption(whiteattop);
@@ -425,7 +424,7 @@ hilite_set(int h, int to)
 }
 
 /*************************************************************************/
-void
+static void
 hilite_stop(void)
 {
   if (flash) {
@@ -442,7 +441,7 @@ hilite_stop(void)
 }
 
 /*************************************************************************/
-void
+static void
 hilite_start(int h)
 {
   if (hilite[0].show) {
@@ -457,7 +456,7 @@ hilite_start(int h)
 /*************************************************************************
  *                          TURN FUNCTIONS                               *
  *************************************************************************/
-void
+static void
 turn_change(void)
 {
   hilite_stop();
@@ -470,7 +469,7 @@ turn_change(void)
 }
 
 /*************************************************************************/
-int
+static int
 piecenumber(wimp_mousestr *m)
 {
   wimp_wstate wi;
@@ -492,7 +491,7 @@ piecenumber(wimp_mousestr *m)
 /*************************************************************************
  *                       MAIN WINDOW FUNCTIONS                           *
  *************************************************************************/
-void
+static void
 makemove(void)
 {
   GameRec *game = &GameList[GameCnt];
@@ -544,7 +543,7 @@ makemove(void)
 }
 
 /*************************************************************************/
-void
+static void
 undomove(void)
 {
   GameRec *game;
@@ -612,7 +611,7 @@ undomove(void)
 }
 
 /*************************************************************************/
-void
+static void
 compmove_do(int called_at, void *handle)
 {
   static int comphimode;
@@ -650,7 +649,7 @@ compmove_do(int called_at, void *handle)
 }
 
 /*************************************************************************/
-void
+static void
 selectpromote(void)
 {
   dbox d;
@@ -714,7 +713,7 @@ selectpromote(void)
 }
 
 /*************************************************************************/
-void
+static void
 setpiece(int icon, int piece, int side)
 {
   if (side == neutral) {
@@ -729,7 +728,7 @@ setpiece(int icon, int piece, int side)
 }
 
 /*************************************************************************/
-int
+static int
 noofpieces(int pce, int side)
 {
   int i, c = 0;
@@ -742,7 +741,7 @@ noofpieces(int pce, int side)
 }
 
 /*************************************************************************/
-void
+static void
 alterboard(int icon)
 {
   hilite_stop();
@@ -785,7 +784,7 @@ alterboard(int icon)
 }
 
 /*************************************************************************/
-void
+static void
 movepiece(int icon)
 {
   if (isoption(editmode)) {
@@ -839,7 +838,7 @@ cancel_compthink(int opt)
 }
 
 /*************************************************************************/
-void
+static void
 main_buttonpress(wimp_mousestr *m)
 {
   int icon;
@@ -894,7 +893,7 @@ main_redraw(wimp_redrawstr *r,
 }
 
 /*************************************************************************/
-void
+static void
 main_updatescreen(void)
 {
   wimp_redrawstr r;
@@ -904,7 +903,7 @@ main_updatescreen(void)
 }
 
 /*************************************************************************/
-void
+static void
 chessevent(void)
 {
   set_thinking(0);
@@ -912,7 +911,7 @@ chessevent(void)
 }
 
 /*************************************************************************/
-void
+static void
 showload(void)
 {
   MaxCnt = GameCnt;
@@ -929,7 +928,7 @@ showload(void)
 }
 
 /*************************************************************************/
-void
+static void
 one_sec_event(int called_at, void *handle)
 {
   int compmoved;
@@ -1009,7 +1008,7 @@ main_event_handler(wimp_eventstr *e, void *handle)
 /*************************************************************************
  *                          MENU FUNCTIONS                               *
  *************************************************************************/
-void
+static void
 reverseboard(void)
 {
   toggleoption(whiteattop);
@@ -1027,10 +1026,11 @@ reverseboard(void)
 }
 
 /*************************************************************************/
-void
+static void
 clearboard(void)
 {
   int i;
+
   chesslib_newgame();
   for (i = 0; i < 64; i++) {
     color[i] = 2;
@@ -1051,11 +1051,12 @@ clearboard(void)
 }
 
 /*************************************************************************/
-void
+static void
 resetboard(void)
 {
   static int p[] = {4, 2, 3, 5, 6, 3, 2, 4};
   int i;
+
   chesslib_newgame();
   for (i = 0; i < 8; i++) {
     color[i] = 0;
@@ -1084,20 +1085,22 @@ resetboard(void)
 }
 
 /*************************************************************************/
-BOOL
+static BOOL
 edit_hilite(int icon)
 {
   wimp_icon i;
+
   wimpt_noerr(wimp_get_icon_info(edit_handle, icon, &i));
   return ((i.flags & wimp_ISELECTED) > 0);
 }
 
 /*************************************************************************/
-void
+static void
 edit_event_handler(wimp_eventstr *e, void *handle)
 {
   wimp_w h = *(wimp_w *) handle;
   wimp_mousestr *m = &e->data.but.m;
+
   switch (e->e) {
     case wimp_EOPEN:
       wimpt_noerr(wimp_open_wind(&e->data.o));
@@ -1129,7 +1132,7 @@ edit_event_handler(wimp_eventstr *e, void *handle)
 }
 
 /*************************************************************************/
-void
+static void
 editgame(void)
 {
 
@@ -1145,13 +1148,14 @@ editgame(void)
 }
 
 /*************************************************************************/
-void
+static void
 step_event_handler(wimp_eventstr *e, void *handle)
 {
   wimp_w h = *(wimp_w *) handle;
   wimp_mousestr *m = &e->data.but.m;
   static int stepdir = 0;
   static wimp_emask mask;
+
   switch (e->e) {
     case wimp_ENULL:
       switch (stepdir) {
@@ -1222,7 +1226,7 @@ step_event_handler(wimp_eventstr *e, void *handle)
 }
 
 /*************************************************************************/
-void
+static void
 stepthro(void)
 {
   static wimp_w step_handle;
@@ -1258,7 +1262,7 @@ new_game(void)
 }
 
 /*************************************************************************/
-void
+static void
 resettime(int i)
 {
   if (i) {
@@ -1275,11 +1279,12 @@ resettime(int i)
 }
 
 /*************************************************************************/
-void
+static void
 setup(void)
 {
   dbox d;
   int reset;
+
   if (d = dbox_new("setup"), d != NULL) {
     wimp_emask i = event_getmask();
     dbox_field f;
@@ -1387,21 +1392,21 @@ main_menuproc(void *handle, char *hit)
 }
 
 /*************************************************************************/
-BOOL
+static BOOL
 main_menuon(void)
 {
   return (event_attachmenu(main_handle, main_menu, main_menuproc, 0));
 }
 
 /*************************************************************************/
-BOOL
+static BOOL
 main_menuoff(void)
 {
   return (event_attachmenu(main_handle, 0, 0, 0));
 }
 
 /*************************************************************************/
-void
+static void
 set_defaults(void)
 {
   FILE *file;
