@@ -1,1434 +1,1538 @@
+#include "chess.h"
 #include "chesslib.h"
 #include "chesssave.h"
-#include "chess.h"
 
 #include "alarm.h"
-#include "coords.h"
 #include "baricon.h"
+#include "coords.h"
 #include "dbox.h"
 #include "event.h"
 #include "menu.h"
+#include "messages.h"
 #include "os.h"
 #include "res.h"
 #include "resspr.h"
 #include "template.h"
-#include "template.h"
-#include "wimpt.h"
-#include "wimp.h"
 #include "werr.h"
-#include "messages.h"
+#include "wimp.h"
+#include "wimpt.h"
 #include "win.h"
 
 #include "kernel.h"
-#include <string.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
-
 
 #define Version_string "1.30 (15 Jun 2025)"
 
-
-#define computers_turn() (isoption(arciswhite|blacksturn)==arciswhite || \
-                   isoption(arcisblack|blacksturn)==(arcisblack|blacksturn))
+#define computers_turn()                                                       \
+  (isoption(arciswhite | blacksturn) == arciswhite ||                          \
+   isoption(arcisblack | blacksturn) == (arcisblack | blacksturn))
 
 #define movetoicon(i) icontomove(i)
-
 
 /*************************************************************************
  *                               TYPES                                   *
  *************************************************************************/
-typedef struct hilite_t
-        {
-        BOOL        show;
-        int        off;
-        wimp_icon *on;
-        }hilite_t;
+typedef struct hilite_t {
+  BOOL show;
+  int off;
+  wimp_icon *on;
+} hilite_t;
+
 /*************************************************************************
  *                          GLOBAL VARIABLES                             *
  *************************************************************************/
-wimp_iconflags TURNON,TURNOFF;
+wimp_iconflags TURNON, TURNOFF;
 int HILITETIME;
 menu bar_menu;
 menu main_menu;
 wimp_w main_handle;
 wimp_w edit_handle;
-int edit_piece=-1;
+int edit_piece = -1;
 def_t def;
 hilite_t hilite[2];
 BOOL flash;
 int MaxCnt;
-int SaveCnt=-1;
+int SaveCnt = -1;
 
-wimp_icon* BOARD;
-wimp_icon* ICONS;
+wimp_icon *BOARD;
+wimp_icon *ICONS;
 
-char pname[][12]={"space","pawn","knight","bishop","rook","queen","king"};
-
+char pname[][12] = {"space", "pawn",  "knight", "bishop",
+                    "rook",  "queen", "king"};
 
 BOOL main_menuoff(void);
 BOOL main_menuon(void);
 void new_game(void);
 void set_board(void);
-void compmove_do(int called_at, void * handle);
+void compmove_do(int called_at, void *handle);
 void set_data(void);
+
 /*************************************************************************
  *                             FUNCTIONS                                 *
  *************************************************************************/
-int canmove(void)
+int
+canmove(void)
 {
-return ((SaveCnt>=0)?((GameList[SaveCnt].flags & (cmate|rep|stale|moves50))==0):TRUE);
+  return ((SaveCnt >= 0) ? ((GameList[SaveCnt].flags &
+                             (cmate | rep | stale | moves50)) == 0)
+                         : TRUE);
 }
-/*************************************************************************/
-void show_result(void)
-{
-int i=(GameCnt>=0)?GameList[GameCnt].flags & (cmate|rep|stale|moves50):0;
-switch (i)
-       {
-       case cmate: mess_message("Checkmate");
-                  break;
-       case rep: mess_message("Draw. Repetition");
-                  break;
-       case stale: mess_message("Stalemate");
-                  break;
-       case moves50: mess_message("Draw. 50 moves rule");
-       }
-}
-/*************************************************************************/
-int icontomove(int move)
-{
-if (isoption(whiteattop)==0)
-   {
-   move=( (7-(move>>3)) <<3)+(move & 7) ;
-   }
-else
-   {
-   move=(move & 0xF8)+(7-(move & 7));
-   }
-return move;
-}
-/*************************************************************************/
-static void icon_update(wimp_icon * i)
-{
-wimp_redrawstr r;
-BOOL more;
 
-r.w=main_handle;
-r.box.x0=i->box.x0;
-r.box.x1=i->box.x1;
-r.box.y0=i->box.y0;
-r.box.y1=i->box.y1;
-wimpt_noerr(wimp_update_wind(&r,&more));
-while (more)
-      {
-      wimp_ploticon(i);
-      wimp_get_rectangle(&r,&more);
-      }
-}
 /*************************************************************************/
-static void openwin(wimp_w handle)
+void
+show_result(void)
 {
-wimp_wstate ws;
+  int i = (GameCnt >= 0)
+              ? GameList[GameCnt].flags & (cmate | rep | stale | moves50)
+              : 0;
+  switch (i) {
+    case cmate:
+      mess_message("Checkmate");
+      break;
+    case rep:
+      mess_message("Draw. Repetition");
+      break;
+    case stale:
+      mess_message("Stalemate");
+      break;
+    case moves50:
+      mess_message("Draw. 50 moves rule");
+  }
+}
 
-if (wimpt_complain(wimp_get_wind_state(handle,&ws))==NULL)
-   {
-   ws.o.behind=-1;
-   wimpt_noerr(wimp_open_wind(&ws.o));
-   }
-}
 /*************************************************************************/
-void icontoalg(int k,int m,int flags)
+int
+icontomove(int move)
 {
-if (m==0) return;
-movetoalg(ICONS[k].data.text,m,flags);
-icon_update(&ICONS[k]);
+  if (isoption(whiteattop) == 0) {
+    move = ((7 - (move >> 3)) << 3) + (move & 7);
+  } else {
+    move = (move & 0xF8) + (7 - (move & 7));
+  }
+  return move;
 }
-/*************************************************************************/
-int movetoalg(char *p,int m,int flags)
-{
-int f,t;
-char *c;
 
-f=m>>8;
-t=(m & 0xff);
+/*************************************************************************/
+static void
+icon_update(wimp_icon *i)
+{
+  wimp_redrawstr r;
+  BOOL more;
 
-if (flags & cstlmask)
-   {
-   if ( (f & 7) < (t & 7) )
-      {
-      return(sprintf(p,"o-o"));
-      }
-   else
-      {
-      return(sprintf(p,"o-o-o"));
-      }
-   }
-else
-   {
-    switch (flags &(check|cmate|stale|rep|moves50))
-           {
-           case check: c=" check";
-                   break;
-           case cmate: c=" mate";
-                   break;
-           case stale: c=" Smate";
-                   break;
-           case rep:
-           case moves50: c=" Draw";
-                   break;
-           default: c="";
-           }
-    return(sprintf(p,"%c%c%c%c%c%s",(f & 7)+'a',(f>>3) +'1',(flags & capture)?'x':'-',(t & 7) +'a',(t>>3) +'1',c));
-   }
+  r.w = main_handle;
+  r.box.x0 = i->box.x0;
+  r.box.x1 = i->box.x1;
+  r.box.y0 = i->box.y0;
+  r.box.y1 = i->box.y1;
+  wimpt_noerr(wimp_update_wind(&r, &more));
+  while (more) {
+    wimp_ploticon(i);
+    wimp_get_rectangle(&r, &more);
+  }
 }
+
 /*************************************************************************/
-void set_time(int i,int t)
+static void
+openwin(wimp_w handle)
 {
-int h,m;
-m=t/60;
-h=m/60;
-sprintf(ICONS[i].data.text,"%2d:%2d:%02d",h,m%60,t%60);
-icon_update(&ICONS[i]);
+  wimp_wstate ws;
+
+  if (wimpt_complain(wimp_get_wind_state(handle, &ws)) == NULL) {
+    ws.o.behind = -1;
+    wimpt_noerr(wimp_open_wind(&ws.o));
+  }
 }
+
 /*************************************************************************/
-void changeclocks(void)
+void
+icontoalg(int k, int m, int flags)
 {
-static int time;
-int i=(isoption(blacksturn|whiteattop)==0 || isoption(blacksturn|whiteattop)==(blacksturn|whiteattop))?7:1;
-int t=chesslib_elapsedtime(SaveCnt)/100;
-if (t!=time)
-    {
-    set_time(i,t);
-    time=t;
+  if (m == 0) {
+    return;
+  }
+  movetoalg(ICONS[k].data.text, m, flags);
+  icon_update(&ICONS[k]);
+}
+
+/*************************************************************************/
+int
+movetoalg(char *p, int m, int flags)
+{
+  int f, t;
+  char *c;
+
+  f = m >> 8;
+  t = (m & 0xff);
+
+  if (flags & cstlmask) {
+    if ((f & 7) < (t & 7)) {
+      return (sprintf(p, "o-o"));
+    } else {
+      return (sprintf(p, "o-o-o"));
     }
+  } else {
+    switch (flags & (check | cmate | stale | rep | moves50)) {
+      case check:
+        c = " check";
+        break;
+      case cmate:
+        c = " mate";
+        break;
+      case stale:
+        c = " Smate";
+        break;
+      case rep:
+      case moves50:
+        c = " Draw";
+        break;
+      default:
+        c = "";
+    }
+    return (sprintf(p, "%c%c%c%c%c%s", (f & 7) + 'a', (f >> 3) + '1',
+                    (flags & capture) ? 'x' : '-', (t & 7) + 'a',
+                    (t >> 3) + '1', c));
+  }
 }
 
 /*************************************************************************/
-void writeclocks(int count)
+void
+set_time(int i, int t)
 {
-int t;
-int i;
-int h,m;
-m=(count &1);
-t=(count<0)?0:GameList[count].time;
-i=((m==1 && isoption(whiteattop)) || (m==0 && !isoption(whiteattop)))?7:1;
-t=t/100;
-m=t/60;
-h=m/60;
-sprintf(ICONS[i].data.text,"%2d:%2d:%02d",h,m%60,t%60);
-icon_update(&ICONS[i]);
+  int h, m;
+  m = t / 60;
+  h = m / 60;
+  sprintf(ICONS[i].data.text, "%2d:%2d:%02d", h, m % 60, t % 60);
+  icon_update(&ICONS[i]);
 }
+
 /*************************************************************************/
-void set_thinking(int set)
+void
+changeclocks(void)
 {
-static int best,depth,con;
-if (set==0)
-   {
-   if (best!=chesslib_bestsofar()) icontoalg(3,best=chesslib_bestsofar(),0);
-   if (depth!=chesslib_searchdepth())
-      {
-      sprintf(ICONS[4].data.text,"%d",depth=chesslib_searchdepth());
+  static int time;
+  int i = (isoption(blacksturn | whiteattop) == 0 ||
+           isoption(blacksturn | whiteattop) == (blacksturn | whiteattop))
+              ? 7
+              : 1;
+  int t = chesslib_elapsedtime(SaveCnt) / 100;
+  if (t != time) {
+    set_time(i, t);
+    time = t;
+  }
+}
+
+/*************************************************************************/
+void
+writeclocks(int count)
+{
+  int t;
+  int i;
+  int h, m;
+  m = (count & 1);
+  t = (count < 0) ? 0 : GameList[count].time;
+  i = ((m == 1 && isoption(whiteattop)) || (m == 0 && !isoption(whiteattop)))
+          ? 7
+          : 1;
+  t = t / 100;
+  m = t / 60;
+  h = m / 60;
+  sprintf(ICONS[i].data.text, "%2d:%2d:%02d", h, m % 60, t % 60);
+  icon_update(&ICONS[i]);
+}
+
+/*************************************************************************/
+void
+set_thinking(int set)
+{
+  static int best, depth, con;
+  if (set == 0) {
+    if (best != chesslib_bestsofar()) {
+      icontoalg(3, best = chesslib_bestsofar(), 0);
+    }
+    if (depth != chesslib_searchdepth()) {
+      sprintf(ICONS[4].data.text, "%d", depth = chesslib_searchdepth());
       icon_update(&ICONS[4]);
+    }
+    if (con != chesslib_considering() && !isoption(hintoff)) {
+      if (con = chesslib_considering(), con != 0) {
+        icontoalg(5, con, 0);
+      } else {
+        sprintf(ICONS[5].data.text, "none");
+        icon_update(&ICONS[5]);
       }
-   if (con!=chesslib_considering() && !isoption(hintoff))
-      {
-      if (con=chesslib_considering(),con!=0)
-         {
-         icontoalg(5,con,0);
-         }
-      else
-         {
-         sprintf(ICONS[5].data.text,"none");
-         icon_update(&ICONS[5]);
-         }
-      }
-   }
-else
-   {
-   ICONS[3].data.text[0]=0;
-   ICONS[4].data.text[0]=0;
-   best=depth=0;
-   icon_update(&ICONS[3]);
-   icon_update(&ICONS[4]);
-   if (set==1)
-      {
-      sprintf(ICONS[5].data.text,(isoption(hintoff))?"off":"none");
+    }
+  } else {
+    ICONS[3].data.text[0] = 0;
+    ICONS[4].data.text[0] = 0;
+    best = depth = 0;
+    icon_update(&ICONS[3]);
+    icon_update(&ICONS[4]);
+    if (set == 1) {
+      sprintf(ICONS[5].data.text, (isoption(hintoff)) ? "off" : "none");
       icon_update(&ICONS[5]);
-      con=0;
+      con = 0;
+    } else {
+      if (con != chesslib_considering() && !isoption(hintoff)) {
+        if (con = chesslib_considering(), con != 0) {
+          icontoalg(5, con, 0);
+        } else {
+          sprintf(ICONS[5].data.text, (isoption(hintoff)) ? "off" : "none");
+          icon_update(&ICONS[5]);
+        }
       }
-   else
-      {
-      if (con!=chesslib_considering() && !isoption(hintoff))
-         {
-         if (con=chesslib_considering(),con!=0)
-            {
-            icontoalg(5,con,0);
-            }
-         else
-            {
-            sprintf(ICONS[5].data.text,(isoption(hintoff))?"off":"none");
-            icon_update(&ICONS[5]);
-            }
-         }
-      }
-   }
-}
-/*************************************************************************/
-char *playname(int side)
-{
-if (side)
-   {
-   return((isoption(arcisblack))?"Archimedes":"Player");
-   }
-else
-   {
-   return((isoption(arciswhite))?"Archimedes":"Player");
-   }
-}
-/*************************************************************************/
-void lasticon(int i,int c)
-{
-if (c<0)
-   {
-   strcpy(ICONS[i].data.text,"none");
-   icon_update(&ICONS[i]);
-   }
-else
-   {
-   icontoalg(i,GameList[c].gmove,GameList[c].flags);
-   }
-}
-/*************************************************************************/
-void timeicon(int i,int c)
-{
-if (c<0)
-   {
-   strcpy(ICONS[i].data.text," 0: 0:00");
-   icon_update(&ICONS[i]);
-   }
-else
-   {
-   set_time(i,GameList[c].time/100);
-   }
-}
-/*************************************************************************/
-void set_data(void)
-{
-
-int i,cnt=GameCnt;
-int topside= (isoption(whiteattop))?white:black;
-
-i=isoption(blacksturn|whiteattop);
-i= (i==blacksturn || i==whiteattop)?0:8;
-ICONS[i].flags=TURNON;
-ICONS[i^8].flags=TURNOFF;
-
-strcpy(ICONS[0].data.text,playname(topside));
-strcpy(ICONS[8].data.text,playname(!topside));
-
-lasticon((i)?2:6,cnt);
-lasticon((i)?6:2,cnt-1);
-
-timeicon((i)?1:7,cnt);
-timeicon((i)?7:1,cnt-1);
-
-sprintf(ICONS[9].data.text,"%d",((cnt+1)>>1)+1);
-
-icon_update(&ICONS[0]);
-icon_update(&ICONS[8]);
-icon_update(&ICONS[9]);
-
-}
-/*************************************************************************/
-void set_board(void)
-{
-int i,j,wt=isoption(whiteattop);
-
-for (i=0;i<64;i++)
-    {
-    j=(wt)?(7-(i&7))+(i&~7):(i&7)+(56-(i&~7));
-    switch (color[i])
-           {
-           case 2:
-           sprintf(&BOARD[j].data.text[1],"space");
-           break;
-          default:
-    sprintf(&BOARD[j].data.text[1],"%c%s",color[i]?'b':'w',pname[board[i]]);
-           }
     }
-
-for (i=0;i<8;i++)
-    {
-    ICONS[i+10].data.text[0]=(wt)?'1'+i:'8'-i;
-    ICONS[97-12+i].data.text[0]=(wt)?'h'-i:'a'+i;
-    }
+  }
 }
+
+/*************************************************************************/
+char *
+playname(int side)
+{
+  if (side) {
+    return ((isoption(arcisblack)) ? "Archimedes" : "Player");
+  } else {
+    return ((isoption(arciswhite)) ? "Archimedes" : "Player");
+  }
+}
+
+/*************************************************************************/
+void
+lasticon(int i, int c)
+{
+  if (c < 0) {
+    strcpy(ICONS[i].data.text, "none");
+    icon_update(&ICONS[i]);
+  } else {
+    icontoalg(i, GameList[c].gmove, GameList[c].flags);
+  }
+}
+
+/*************************************************************************/
+void
+timeicon(int i, int c)
+{
+  if (c < 0) {
+    strcpy(ICONS[i].data.text, " 0: 0:00");
+    icon_update(&ICONS[i]);
+  } else {
+    set_time(i, GameList[c].time / 100);
+  }
+}
+
+/*************************************************************************/
+void
+set_data(void)
+{
+
+  int i, cnt = GameCnt;
+  int topside = (isoption(whiteattop)) ? white : black;
+
+  i = isoption(blacksturn | whiteattop);
+  i = (i == blacksturn || i == whiteattop) ? 0 : 8;
+  ICONS[i].flags = TURNON;
+  ICONS[i ^ 8].flags = TURNOFF;
+
+  strcpy(ICONS[0].data.text, playname(topside));
+  strcpy(ICONS[8].data.text, playname(!topside));
+
+  lasticon((i) ? 2 : 6, cnt);
+  lasticon((i) ? 6 : 2, cnt - 1);
+
+  timeicon((i) ? 1 : 7, cnt);
+  timeicon((i) ? 7 : 1, cnt - 1);
+
+  sprintf(ICONS[9].data.text, "%d", ((cnt + 1) >> 1) + 1);
+
+  icon_update(&ICONS[0]);
+  icon_update(&ICONS[8]);
+  icon_update(&ICONS[9]);
+}
+
+/*************************************************************************/
+void
+set_board(void)
+{
+  int i, j, wt = isoption(whiteattop);
+
+  for (i = 0; i < 64; i++) {
+    j = (wt) ? (7 - (i & 7)) + (i & ~7) : (i & 7) + (56 - (i & ~7));
+    switch (color[i]) {
+      case 2:
+        sprintf(&BOARD[j].data.text[1], "space");
+        break;
+      default:
+        sprintf(&BOARD[j].data.text[1], "%c%s", color[i] ? 'b' : 'w',
+                pname[board[i]]);
+    }
+  }
+
+  for (i = 0; i < 8; i++) {
+    ICONS[i + 10].data.text[0] = (wt) ? '1' + i : '8' - i;
+    ICONS[97 - 12 + i].data.text[0] = (wt) ? 'h' - i : 'a' + i;
+  }
+}
+
 /*************************************************************************
  *                          HILITE FUNCTIONS                             *
  *************************************************************************/
-static void hilite_draw(int h)
+static void
+hilite_draw(int h)
 {
-if (h) h=1;
-if (flash)
-   {
-   icon_update(hilite[h].on);
-   }
-else
-   {
-   icon_update(&BOARD[hilite[h].off]);
-   }
+  if (h) {
+    h = 1;
+  }
+  if (flash) {
+    icon_update(hilite[h].on);
+  } else {
+    icon_update(&BOARD[hilite[h].off]);
+  }
 }
-/*************************************************************************/
-static void hilite_do(int called_at, void * handle)
-{
-called_at=called_at;
-handle=handle;
 
-flash^=1;
-if (hilite[0].show)
-   {
-   hilite_draw(0);
-   if (hilite[1].show) hilite_draw(1);
-   }
-HILITETIME=alarm_timenow()+50;
-alarm_set(HILITETIME,hilite_do,0);
-}
 /*************************************************************************/
-static void hilite_set(int h,int to)
+static void
+hilite_do(int called_at, void *handle)
 {
-if (h) h=1;
-hilite[h].on->box.x0=BOARD[to].box.x0;
-hilite[h].on->box.x1=BOARD[to].box.x1;
-hilite[h].on->box.y0=BOARD[to].box.y0;
-hilite[h].on->box.y1=BOARD[to].box.y1;
-hilite[h].off=to;
-hilite[h].show=TRUE;
+  called_at = called_at;
+  handle = handle;
+
+  flash ^= 1;
+  if (hilite[0].show) {
+    hilite_draw(0);
+    if (hilite[1].show) {
+      hilite_draw(1);
+    }
+  }
+  HILITETIME = alarm_timenow() + 50;
+  alarm_set(HILITETIME, hilite_do, 0);
 }
+
 /*************************************************************************/
-void hilite_stop(void)
+static void
+hilite_set(int h, int to)
 {
-if (flash)
-   {
-   if (hilite[0].show) icon_update(&BOARD[hilite[0].off]);
-   if (hilite[1].show) icon_update(&BOARD[hilite[1].off]);
-   }
-hilite[0].show=FALSE;
-hilite[1].show=FALSE;
-alarm_remove(HILITETIME,0);
+  if (h) {
+    h = 1;
+  }
+  hilite[h].on->box.x0 = BOARD[to].box.x0;
+  hilite[h].on->box.x1 = BOARD[to].box.x1;
+  hilite[h].on->box.y0 = BOARD[to].box.y0;
+  hilite[h].on->box.y1 = BOARD[to].box.y1;
+  hilite[h].off = to;
+  hilite[h].show = TRUE;
 }
+
 /*************************************************************************/
-void hilite_start(int h)
+void
+hilite_stop(void)
 {
-if (hilite[0].show) hilite_stop();
-flash=FALSE;
-hilite[1].show=FALSE;
-hilite_set(0,h);
-hilite_do(0,0);
+  if (flash) {
+    if (hilite[0].show) {
+      icon_update(&BOARD[hilite[0].off]);
+    }
+    if (hilite[1].show) {
+      icon_update(&BOARD[hilite[1].off]);
+    }
+  }
+  hilite[0].show = FALSE;
+  hilite[1].show = FALSE;
+  alarm_remove(HILITETIME, 0);
 }
+
+/*************************************************************************/
+void
+hilite_start(int h)
+{
+  if (hilite[0].show) {
+    hilite_stop();
+  }
+  flash = FALSE;
+  hilite[1].show = FALSE;
+  hilite_set(0, h);
+  hilite_do(0, 0);
+}
+
 /*************************************************************************
  *                          TURN FUNCTIONS                               *
  *************************************************************************/
-void turn_change(void)
+void
+turn_change(void)
 {
-hilite_stop();
-toggleoption(blacksturn);
-if (!isoption(editmode|stepmode) && !computers_turn() && GameCnt>=0)
-   chesslib_startplaytimer();
-set_data();
-save_board();
+  hilite_stop();
+  toggleoption(blacksturn);
+  if (!isoption(editmode | stepmode) && !computers_turn() && GameCnt >= 0) {
+    chesslib_startplaytimer();
+  }
+  set_data();
+  save_board();
 }
-/*************************************************************************/
-int piecenumber(wimp_mousestr *m)
-{
-wimp_wstate wi;
-int x;
-int y;
 
-wimp_get_wind_state(main_handle,&wi);
-x=coords_x_toworkarea(m->x,(coords_cvtstr *)&wi.o.box);
-y=coords_y_toworkarea(m->y,(coords_cvtstr *)&wi.o.box);
-if ((x=(x-6)/96)>7) return(-1);
-if ((y=(-8-y)/96)>7) return(-1);
-return(y*8+x);
+/*************************************************************************/
+int
+piecenumber(wimp_mousestr *m)
+{
+  wimp_wstate wi;
+  int x;
+  int y;
+
+  wimp_get_wind_state(main_handle, &wi);
+  x = coords_x_toworkarea(m->x, (coords_cvtstr *) &wi.o.box);
+  y = coords_y_toworkarea(m->y, (coords_cvtstr *) &wi.o.box);
+  if ((x = (x - 6) / 96) > 7) {
+    return (-1);
+  }
+  if ((y = (-8 - y) / 96) > 7) {
+    return (-1);
+  }
+  return (y * 8 + x);
 }
+
 /*************************************************************************
  *                       MAIN WINDOW FUNCTIONS                           *
  *************************************************************************/
-void makemove(void)
+void
+makemove(void)
 {
-GameRec *game=&GameList[GameCnt];
-int from=movetoicon(game->gmove>>8);
-int to=movetoicon(game->gmove & 0xFF);
-char *s=&BOARD[from].data.text[1];
+  GameRec *game = &GameList[GameCnt];
+  int from = movetoicon(game->gmove >> 8);
+  int to = movetoicon(game->gmove & 0xFF);
+  char *s = &BOARD[from].data.text[1];
 
-writeclocks(GameCnt);
+  writeclocks(GameCnt);
 
-if (game->prompiece==no_piece) strncpy(&BOARD[to].data.text[1],s,11);
-else
-   {
-   BOARD[to].data.text[1]=(GameCnt & 1)?'b':'w';
-   strncpy(&BOARD[to].data.text[2],pname[game->prompiece],10);
-   }
-strncpy(s,"space",11);
-icon_update(&BOARD[from]);
-icon_update(&BOARD[to]);
-if (game->flags &cstlmask)
-   {
-   if ((from&7) > (to&7))
-      {
-      if (isoption(whiteattop))
-         {
-         from-=3;to+=1;
-         }
-      else
-         {
-         from-=4;to+=1;
-         }
+  if (game->prompiece == no_piece) {
+    strncpy(&BOARD[to].data.text[1], s, 11);
+  } else {
+    BOARD[to].data.text[1] = (GameCnt & 1) ? 'b' : 'w';
+    strncpy(&BOARD[to].data.text[2], pname[game->prompiece], 10);
+  }
+  strncpy(s, "space", 11);
+  icon_update(&BOARD[from]);
+  icon_update(&BOARD[to]);
+  if (game->flags & cstlmask) {
+    if ((from & 7) > (to & 7)) {
+      if (isoption(whiteattop)) {
+        from -= 3;
+        to += 1;
+      } else {
+        from -= 4;
+        to += 1;
       }
-   else
-      {
-       if (isoption(whiteattop))
-         {
-         from+=4;to-=1;
-         }
-      else
-         {
-         from+=3;to-=1;
-         }
-     }
-   s=&BOARD[from].data.text[1];
-   strncpy(&BOARD[to].data.text[1],s,11);
-   strncpy(s,"space",11);
-   icon_update(&BOARD[from]);
-   icon_update(&BOARD[to]);
-   }
-else if (game->flags &epmask)
-   {
-   to+=((from>>3) > (to>>3))?8:-8 ;
-   strncpy(&BOARD[to].data.text[1],"space",11);
-   icon_update(&BOARD[to]);
-   }
-turn_change();
-set_thinking(2);
-}
-/*************************************************************************/
-void undomove(void)
-{
-GameRec *game;
-int to;
-int from;
-char *s;
-
-if (GameCnt<0) return;
-chesslib_undomove();
-writeclocks(GameCnt);
-writeclocks(GameCnt-1);
-clearoption(comp_undo);
-game=&GameList[GameCnt+1];
-to=movetoicon(game->gmove>>8);
-from=movetoicon(game->gmove & 0xFF);
-s=&BOARD[from].data.text[1];
-if (game->prompiece==no_piece) strncpy(&BOARD[to].data.text[1],s,11);
-else
-   {
-   BOARD[to].data.text[1]=(GameCnt &1)?'w':'b';
-   strncpy(&BOARD[to].data.text[2],"pawn",10);
-   }
-
-if (game->flags & capture)
-   {
-   s[0]=(game->color==0)?'w':'b';
-   strncpy(&s[1],pname[game->piece],10);
-   }
-else
-   {
-   strncpy(s,"space",11);
-   }
-icon_update(&BOARD[from]);
-icon_update(&BOARD[to]);
-if (game->flags &cstlmask)
-   {
-   if ((from &7) < (to&7))
-      {
-      if (isoption(whiteattop))
-         {
-         from+=1;to-=3;
-         }
-      else
-         {
-         from+=1;to-=4;
-         }
+    } else {
+      if (isoption(whiteattop)) {
+        from += 4;
+        to -= 1;
+      } else {
+        from += 3;
+        to -= 1;
       }
-   else
-      {
-       if (isoption(whiteattop))
-         {
-         from-=1;to+=4;
-         }
-      else
-         {
-         from-=1;to+=3;
-         }
-     }
-   s=&BOARD[from].data.text[1];
-   strncpy(&BOARD[to].data.text[1],s,11);
-   strncpy(s,"space",11);
-   icon_update(&BOARD[from]);
-   icon_update(&BOARD[to]);
-   }
-else if (game->flags &epmask)
-   {
-   from+=((from>>3) < (to>>3))?8:-8 ;
-   BOARD[from].data.text[1]=(GameCnt &1)?'b':'w';
-   strncpy(&BOARD[from].data.text[2],"pawn",10);
-   icon_update(&BOARD[from]);
-   }
-turn_change();
-set_thinking(1);
-}
-/*************************************************************************/
-void compmove_do(int called_at, void * handle)
-{
-static int comphimode;
-static int m;
-
-if (handle==0)
-   {
-   if (isoption(comp_moving))
-      {
-      clearoption(comp_moving);
-      alarm_removeall((void *)1);
-      }
-   return;
-   }
-if (called_at==0)
-   {
-   comphimode=0;
-   setoption(comp_moving);
-   }
-switch (comphimode++)
-       {
-       case 0: hilite_start(movetoicon(GameList[GameCnt].gmove>>8));
-               alarm_set(m=alarm_timenow()+250,compmove_do,(void *)1);
-               break;
-       case 1: hilite_set(1,movetoicon(GameList[GameCnt].gmove & 0xff));
-               alarm_set(m=alarm_timenow()+250,compmove_do,(void *)1);
-               break;
-      default: makemove();
-               show_result();
-               hilite_stop();
-               if (isoption(dobeep)) _kernel_oswrch(7);
-               clearoption(comp_moving);
-       }
-}
-/*************************************************************************/
-void selectpromote(void)
-{
-dbox d;
-char *p;
-wimp_wind *w;
-wimp_mousestr m;
-int x,y;
-wimp_get_point_info(&m);
-if (isoption(blacksturn))
-   {
-   p="bprom";
-   w=template_syshandle(p);
-   x=w->box.x1-w->box.x0;
-   y=w->box.y1-w->box.y0;
-   w->box.x0=m.x-200;
-   w->box.x1=w->box.x0+x;
-   if (isoption(whiteattop))
-      {
-      w->box.y0=m.y-160;
-      w->box.y1=w->box.y0+y;
-      }
-   else
-      {
-      w->box.y0=m.y+32;
-      w->box.y1=w->box.y0+y;
-      }
-   }
-else
-   {
-   p="wprom";
-   w=template_syshandle(p);
-   x=w->box.x1-w->box.x0;
-   y=w->box.y1-w->box.y0;
-   w->box.x0=m.x-200;
-   w->box.x1=w->box.x0+x;
-   if (isoption(whiteattop))
-      {
-      w->box.y0=m.y+32;
-      w->box.y1=w->box.y0+y;
-      }
-   else
-      {
-      w->box.y0=m.y-160;
-      w->box.y1=w->box.y0+y;
-      }
-   }
-
-if (d=dbox_new(p),d!=NULL)
-   {
-   wimp_emask mask;
-   mask=event_getmask();
-   dbox_showstatic(d);
-   event_setmask((wimp_emask) 0);
-   switch (dbox_fillin(d))
-          {
-          case 1: x=rook;
-                  break;
-          case 2: x=bishop;
-                  break;
-          case 3: x=knight;
-                  break;
-         default: x=queen;
-          }
-   chesslib_setprompiece(x);
-   event_setmask(mask);
-   dbox_dispose(&d);
-   }
-
-}
-/*************************************************************************/
-void setpiece(int icon,int piece,int side)
-{
-if (side==neutral)
-   {
-   strcpy(&BOARD[icon].data.text[1],"space");
-   }
-else
-   {
-   sprintf(&BOARD[icon].data.text[1],"%c%s",(side)?'b':'w',pname[piece]);
-   }
-chesslib_setpiece(icontomove(icon),piece,side);
-icon_update(&BOARD[icon]);
-hilite_stop();
-}
-/*************************************************************************/
-int noofpieces(int pce,int side)
-{
-int i,c=0;
-for (i=0;i<64;i++)
-    {
-    if (board[i]==pce && color[i]==side) c++;
     }
-return(c);
+    s = &BOARD[from].data.text[1];
+    strncpy(&BOARD[to].data.text[1], s, 11);
+    strncpy(s, "space", 11);
+    icon_update(&BOARD[from]);
+    icon_update(&BOARD[to]);
+  } else if (game->flags & epmask) {
+    to += ((from >> 3) > (to >> 3)) ? 8 : -8;
+    strncpy(&BOARD[to].data.text[1], "space", 11);
+    icon_update(&BOARD[to]);
+  }
+  turn_change();
+  set_thinking(2);
 }
-/*************************************************************************/
-void alterboard(int icon)
-{
-hilite_stop();
-if (edit_piece==-1) setpiece(icon,no_piece,neutral);
-else
-   {
-   int side=edit_piece / 5;
-   int pce=(edit_piece % 5)+1;
-   int pcs[5];
-   int couldbepromoted=0;
-   int i;
 
-   for (i=1;i<6;i++) couldbepromoted+=pcs[i]=noofpieces(i,side);
-   couldbepromoted= (pcs[pawn]<8 && couldbepromoted<15);
-  switch (pce)
-     {
-     case pawn: if (couldbepromoted) setpiece(icon,pce,side);
-                break;
-     case queen: if (pcs[pce]==0 || couldbepromoted) setpiece(icon,pce,side);
-                 break;
-        default: if (pcs[pce]<2 || couldbepromoted) setpiece(icon,pce,side);
-     }
-   }
-if (MaxCnt!=-1)
-   {
-   GameCnt=MaxCnt=-1;
-   clearoption(blacksturn);
-   set_data();
-   set_thinking(1);
-   }
-}
 /*************************************************************************/
-void movepiece(int icon)
+void
+undomove(void)
 {
-if (isoption(editmode))
-   {
-   if (BOARD[icon].data.text[1]!='s')
-      {
-      hilite_start(icon);
+  GameRec *game;
+  int to;
+  int from;
+  char *s;
+
+  if (GameCnt < 0) {
+    return;
+  }
+  chesslib_undomove();
+  writeclocks(GameCnt);
+  writeclocks(GameCnt - 1);
+  clearoption(comp_undo);
+  game = &GameList[GameCnt + 1];
+  to = movetoicon(game->gmove >> 8);
+  from = movetoicon(game->gmove & 0xFF);
+  s = &BOARD[from].data.text[1];
+  if (game->prompiece == no_piece) {
+    strncpy(&BOARD[to].data.text[1], s, 11);
+  } else {
+    BOARD[to].data.text[1] = (GameCnt & 1) ? 'w' : 'b';
+    strncpy(&BOARD[to].data.text[2], "pawn", 10);
+  }
+
+  if (game->flags & capture) {
+    s[0] = (game->color == 0) ? 'w' : 'b';
+    strncpy(&s[1], pname[game->piece], 10);
+  } else {
+    strncpy(s, "space", 11);
+  }
+  icon_update(&BOARD[from]);
+  icon_update(&BOARD[to]);
+  if (game->flags & cstlmask) {
+    if ((from & 7) < (to & 7)) {
+      if (isoption(whiteattop)) {
+        from += 1;
+        to -= 3;
+      } else {
+        from += 1;
+        to -= 4;
       }
-   else if (hilite[0].show && BOARD[icon].data.text[1]=='s')
-      {
-      int i=icontomove(hilite[0].off);
-      setpiece(icon,board[i],color[i]);
-      setpiece(hilite[0].off,no_piece,neutral);
+    } else {
+      if (isoption(whiteattop)) {
+        from -= 1;
+        to += 4;
+      } else {
+        from -= 1;
+        to += 3;
+      }
+    }
+    s = &BOARD[from].data.text[1];
+    strncpy(&BOARD[to].data.text[1], s, 11);
+    strncpy(s, "space", 11);
+    icon_update(&BOARD[from]);
+    icon_update(&BOARD[to]);
+  } else if (game->flags & epmask) {
+    from += ((from >> 3) < (to >> 3)) ? 8 : -8;
+    BOARD[from].data.text[1] = (GameCnt & 1) ? 'b' : 'w';
+    strncpy(&BOARD[from].data.text[2], "pawn", 10);
+    icon_update(&BOARD[from]);
+  }
+  turn_change();
+  set_thinking(1);
+}
+
+/*************************************************************************/
+void
+compmove_do(int called_at, void *handle)
+{
+  static int comphimode;
+  static int m;
+
+  if (handle == 0) {
+    if (isoption(comp_moving)) {
+      clearoption(comp_moving);
+      alarm_removeall((void *) 1);
+    }
+    return;
+  }
+  if (called_at == 0) {
+    comphimode = 0;
+    setoption(comp_moving);
+  }
+  switch (comphimode++) {
+    case 0:
+      hilite_start(movetoicon(GameList[GameCnt].gmove >> 8));
+      alarm_set(m = alarm_timenow() + 250, compmove_do, (void *) 1);
+      break;
+    case 1:
+      hilite_set(1, movetoicon(GameList[GameCnt].gmove & 0xff));
+      alarm_set(m = alarm_timenow() + 250, compmove_do, (void *) 1);
+      break;
+    default:
+      makemove();
+      show_result();
       hilite_stop();
-      if (MaxCnt!=-1)
-         {
-         GameCnt=MaxCnt=-1;
-         clearoption(blacksturn);
-         set_data();
-         set_thinking(1);
-         }
+      if (isoption(dobeep)) {
+        _kernel_oswrch(7);
       }
-   }
-else if (!isoption(stepmode))
-   {
-   char c=(isoption(blacksturn))?'b':'w';
-   if (BOARD[icon].data.text[1]==c)
-      {
-      hilite_start(icon);
-      }
-   else if (hilite[0].show)
-      {
-     if (chesslib_domove((icontomove(hilite[0].off)<<8)+icontomove(icon),1))
-         {
-         if (GameList[GameCnt].flags & promote) selectpromote();
-         MaxCnt=GameCnt;
-         makemove();
-         show_result();
-         hilite_stop();
-         }
-      }
-   }
+      clearoption(comp_moving);
+  }
 }
+
 /*************************************************************************/
-BOOL cancel_compthink(int opt)
+void
+selectpromote(void)
 {
-if (isoption(comp_thinking))
-   {
-   setoption(opt);
-   chesslib_dontmove();
-   return(TRUE);
-   }
-else if (isoption(comp_moving))
-        {
-        compmove_do(0,0);
-        chesslib_undomove();
-        MaxCnt=GameCnt;
+  dbox d;
+  char *p;
+  wimp_wind *w;
+  wimp_mousestr m;
+  int x, y;
+  wimp_get_point_info(&m);
+  if (isoption(blacksturn)) {
+    p = "bprom";
+    w = template_syshandle(p);
+    x = w->box.x1 - w->box.x0;
+    y = w->box.y1 - w->box.y0;
+    w->box.x0 = m.x - 200;
+    w->box.x1 = w->box.x0 + x;
+    if (isoption(whiteattop)) {
+      w->box.y0 = m.y - 160;
+      w->box.y1 = w->box.y0 + y;
+    } else {
+      w->box.y0 = m.y + 32;
+      w->box.y1 = w->box.y0 + y;
+    }
+  } else {
+    p = "wprom";
+    w = template_syshandle(p);
+    x = w->box.x1 - w->box.x0;
+    y = w->box.y1 - w->box.y0;
+    w->box.x0 = m.x - 200;
+    w->box.x1 = w->box.x0 + x;
+    if (isoption(whiteattop)) {
+      w->box.y0 = m.y + 32;
+      w->box.y1 = w->box.y0 + y;
+    } else {
+      w->box.y0 = m.y - 160;
+      w->box.y1 = w->box.y0 + y;
+    }
+  }
+
+  if (d = dbox_new(p), d != NULL) {
+    wimp_emask mask;
+    mask = event_getmask();
+    dbox_showstatic(d);
+    event_setmask((wimp_emask) 0);
+    switch (dbox_fillin(d)) {
+      case 1:
+        x = rook;
+        break;
+      case 2:
+        x = bishop;
+        break;
+      case 3:
+        x = knight;
+        break;
+      default:
+        x = queen;
+    }
+    chesslib_setprompiece(x);
+    event_setmask(mask);
+    dbox_dispose(&d);
+  }
+}
+
+/*************************************************************************/
+void
+setpiece(int icon, int piece, int side)
+{
+  if (side == neutral) {
+    strcpy(&BOARD[icon].data.text[1], "space");
+  } else {
+    sprintf(&BOARD[icon].data.text[1], "%c%s", (side) ? 'b' : 'w',
+            pname[piece]);
+  }
+  chesslib_setpiece(icontomove(icon), piece, side);
+  icon_update(&BOARD[icon]);
+  hilite_stop();
+}
+
+/*************************************************************************/
+int
+noofpieces(int pce, int side)
+{
+  int i, c = 0;
+  for (i = 0; i < 64; i++) {
+    if (board[i] == pce && color[i] == side) {
+      c++;
+    }
+  }
+  return (c);
+}
+
+/*************************************************************************/
+void
+alterboard(int icon)
+{
+  hilite_stop();
+  if (edit_piece == -1) {
+    setpiece(icon, no_piece, neutral);
+  } else {
+    int side = edit_piece / 5;
+    int pce = (edit_piece % 5) + 1;
+    int pcs[5];
+    int couldbepromoted = 0;
+    int i;
+
+    for (i = 1; i < 6; i++) {
+      couldbepromoted += pcs[i] = noofpieces(i, side);
+    }
+    couldbepromoted = (pcs[pawn] < 8 && couldbepromoted < 15);
+    switch (pce) {
+      case pawn:
+        if (couldbepromoted) {
+          setpiece(icon, pce, side);
         }
-return(FALSE);
+        break;
+      case queen:
+        if (pcs[pce] == 0 || couldbepromoted) {
+          setpiece(icon, pce, side);
+        }
+        break;
+      default:
+        if (pcs[pce] < 2 || couldbepromoted) {
+          setpiece(icon, pce, side);
+        }
+    }
+  }
+  if (MaxCnt != -1) {
+    GameCnt = MaxCnt = -1;
+    clearoption(blacksturn);
+    set_data();
+    set_thinking(1);
+  }
 }
+
 /*************************************************************************/
-void main_buttonpress(wimp_mousestr *m)
+void
+movepiece(int icon)
 {
-int icon;
-switch (m->bbits & (wimp_BLEFT|wimp_BMID|wimp_BRIGHT))
-       {
-       case wimp_BLEFT:
-            if (!isoption(comp_moving|comp_thinking) &&
-                         (canmove()||isoption(editmode)))
-               {
-               if (m->i==11 && (icon=piecenumber(m),icon>=0))
-                  {
-                  if (!isoption(game_started))
-                     {
-                     chesslib_startplaytimer();
-                     setoption(game_started);
-                     }
-                  movepiece(icon);
-                  }
-               }
-            else if (isoption(comp_thinking))
-                    {
-                    chesslib_forcemove();
-                    }
-            break;
-       case wimp_BRIGHT:
-        if (isoption(editmode) && m->i==11 && (icon=piecenumber(m),icon>=0))
-           {
-           if (board[icontomove(icon)]!=king) alterboard(icon);
-           }
-        else if (!cancel_compthink(comp_undo)) undomove();
+  if (isoption(editmode)) {
+    if (BOARD[icon].data.text[1] != 's') {
+      hilite_start(icon);
+    } else if (hilite[0].show && BOARD[icon].data.text[1] == 's') {
+      int i = icontomove(hilite[0].off);
+      setpiece(icon, board[i], color[i]);
+      setpiece(hilite[0].off, no_piece, neutral);
+      hilite_stop();
+      if (MaxCnt != -1) {
+        GameCnt = MaxCnt = -1;
+        clearoption(blacksturn);
+        set_data();
+        set_thinking(1);
       }
-}
-/*************************************************************************/
-static void main_redraw(wimp_redrawstr* r,
-                        os_error * (*redrawproc)(wimp_redrawstr *,BOOL *))
-{
-BOOL more;
-int i;
-int squares;
-squares=(flash)?hilite[0].show+hilite[1].show+83:83;
-wimpt_noerr(redrawproc(r,&more));
-while (more)
-      {
-      for (i=0;i<squares;i++)
-          {
-          wimp_ploticon(&ICONS[i]);
-          }
-
-
-      for (i=(97-12);i<(97-12+8);i++)
-          {
-          wimp_ploticon(&ICONS[i]);
-          }
-
-      wimp_get_rectangle(r,&more);
+    }
+  } else if (!isoption(stepmode)) {
+    char c = (isoption(blacksturn)) ? 'b' : 'w';
+    if (BOARD[icon].data.text[1] == c) {
+      hilite_start(icon);
+    } else if (hilite[0].show) {
+      if (chesslib_domove((icontomove(hilite[0].off) << 8) + icontomove(icon),
+                          1)) {
+        if (GameList[GameCnt].flags & promote) {
+          selectpromote();
+        }
+        MaxCnt = GameCnt;
+        makemove();
+        show_result();
+        hilite_stop();
       }
+    }
+  }
 }
 
 /*************************************************************************/
-void main_updatescreen(void)
+BOOL
+cancel_compthink(int opt)
 {
-wimp_redrawstr r;
-wimpt_noerr(wimp_get_wind_state(main_handle,(wimp_wstate *)&r));
-coords_box_toworkarea(&r.box,(coords_cvtstr*)&r.box);
-main_redraw(&r,wimp_update_wind);
+  if (isoption(comp_thinking)) {
+    setoption(opt);
+    chesslib_dontmove();
+    return (TRUE);
+  } else if (isoption(comp_moving)) {
+    compmove_do(0, 0);
+    chesslib_undomove();
+    MaxCnt = GameCnt;
+  }
+  return (FALSE);
 }
-/*************************************************************************/
-void chessevent(void)
-{
-set_thinking(0);
-event_process();
-}
-/*************************************************************************/
-void showload(void)
-{
-MaxCnt=GameCnt;
-if (GameCnt & 1) clearoption(blacksturn);
-else setoption(blacksturn);
-hilite_stop();
-set_board();
-set_data();
-set_thinking(1);
-main_updatescreen();
-}
-/*************************************************************************/
-void one_sec_event(int called_at, void * handle)
-{
-int compmoved;
-called_at=called_at;
-alarm_set(alarm_timenow()+100,one_sec_event,(void *)2);
-if (handle==(void *)-1) return;
-if (computers_turn() && !isoption(stepmode|editmode|comp_moving|comp_thinking) && canmove())
-   {
-   wimp_emask mask;
-   mask=event_getmask();
-   event_setmask((wimp_emask) 0);
-   setoption(comp_thinking|game_started);
-   compmoved=chesslib_selectmove(chessevent);
-   clearoption(comp_thinking);
-   event_setmask(mask);
-   MaxCnt=GameCnt;
-   if (compmoved) compmove_do(0,(void *)1);
-   else
-      switch (isoption(comp_undo|loading|comp_newgame))
-             {
-             case comp_undo: undomove();
-                             break;
-             case loading:   load_file();
-                             showload();
-                             break;
-             case comp_newgame: new_game();
-                                main_updatescreen();
-                                break;
-             default: show_result();
-             }
-   }
 
-else if (canmove() && !isoption(stepmode|editmode|comp_moving) && isoption(game_started))
+/*************************************************************************/
+void
+main_buttonpress(wimp_mousestr *m)
+{
+  int icon;
+  switch (m->bbits & (wimp_BLEFT | wimp_BMID | wimp_BRIGHT)) {
+    case wimp_BLEFT:
+      if (!isoption(comp_moving | comp_thinking) &&
+          (canmove() || isoption(editmode))) {
+        if (m->i == 11 && (icon = piecenumber(m), icon >= 0)) {
+          if (!isoption(game_started)) {
+            chesslib_startplaytimer();
+            setoption(game_started);
+          }
+          movepiece(icon);
+        }
+      } else if (isoption(comp_thinking)) {
+        chesslib_forcemove();
+      }
+      break;
+    case wimp_BRIGHT:
+      if (isoption(editmode) && m->i == 11 &&
+          (icon = piecenumber(m), icon >= 0)) {
+        if (board[icontomove(icon)] != king) {
+          alterboard(icon);
+        }
+      } else if (!cancel_compthink(comp_undo)) {
+        undomove();
+      }
+  }
+}
+
+/*************************************************************************/
+static void
+main_redraw(wimp_redrawstr *r,
+            os_error *(*redrawproc)(wimp_redrawstr *, BOOL *) )
+{
+  BOOL more;
+  int i;
+  int squares;
+  squares = (flash) ? hilite[0].show + hilite[1].show + 83 : 83;
+  wimpt_noerr(redrawproc(r, &more));
+  while (more) {
+    for (i = 0; i < squares; i++) {
+      wimp_ploticon(&ICONS[i]);
+    }
+
+    for (i = (97 - 12); i < (97 - 12 + 8); i++) {
+      wimp_ploticon(&ICONS[i]);
+    }
+
+    wimp_get_rectangle(r, &more);
+  }
+}
+
+/*************************************************************************/
+void
+main_updatescreen(void)
+{
+  wimp_redrawstr r;
+  wimpt_noerr(wimp_get_wind_state(main_handle, (wimp_wstate *) &r));
+  coords_box_toworkarea(&r.box, (coords_cvtstr *) &r.box);
+  main_redraw(&r, wimp_update_wind);
+}
+
+/*************************************************************************/
+void
+chessevent(void)
+{
+  set_thinking(0);
+  event_process();
+}
+
+/*************************************************************************/
+void
+showload(void)
+{
+  MaxCnt = GameCnt;
+  if (GameCnt & 1) {
+    clearoption(blacksturn);
+  } else {
+    setoption(blacksturn);
+  }
+  hilite_stop();
+  set_board();
+  set_data();
+  set_thinking(1);
+  main_updatescreen();
+}
+
+/*************************************************************************/
+void
+one_sec_event(int called_at, void *handle)
+{
+  int compmoved;
+  called_at = called_at;
+  alarm_set(alarm_timenow() + 100, one_sec_event, (void *) 2);
+  if (handle == (void *) -1) {
+    return;
+  }
+  if (computers_turn() &&
+      !isoption(stepmode | editmode | comp_moving | comp_thinking) &&
+      canmove()) {
+    wimp_emask mask;
+    mask = event_getmask();
+    event_setmask((wimp_emask) 0);
+    setoption(comp_thinking | game_started);
+    compmoved = chesslib_selectmove(chessevent);
+    clearoption(comp_thinking);
+    event_setmask(mask);
+    MaxCnt = GameCnt;
+    if (compmoved) {
+      compmove_do(0, (void *) 1);
+    } else {
+      switch (isoption(comp_undo | loading | comp_newgame)) {
+        case comp_undo:
+          undomove();
+          break;
+        case loading:
+          load_file();
+          showload();
+          break;
+        case comp_newgame:
+          new_game();
+          main_updatescreen();
+          break;
+        default:
+          show_result();
+      }
+    }
+  }
+
+  else if (canmove() && !isoption(stepmode | editmode | comp_moving) &&
+           isoption(game_started)) {
     changeclocks();
+  }
 }
+
 /*************************************************************************/
-static void main_event_handler(wimp_eventstr *e, void *handle)
+static void
+main_event_handler(wimp_eventstr *e, void *handle)
 {
-handle=handle;
-switch (e->e)
-       {
-       case wimp_EOPEN:   wimpt_noerr(wimp_open_wind(&e->data.o));
-                          break;
-       case wimp_ECLOSE:  wimpt_noerr(wimp_close_wind(e->data.o.w));
-                          break;
-       case wimp_EREDRAW: main_redraw((wimp_redrawstr *)&e->data.o,
-                                       wimp_redraw_wind);
-                          break;
-       case wimp_EBUT:    main_buttonpress(&e->data.but.m);
-                          break;
-      case wimp_ESEND:
-      case wimp_ESENDWANTACK:
-            switch (e->data.msg.hdr.action)
-                   {
-                   case wimp_MDATALOAD:
-                   case wimp_MDATAOPEN:
-                                       if (main_load()) showload();
-                   }
-       }
+  handle = handle;
+  switch (e->e) {
+    case wimp_EOPEN:
+      wimpt_noerr(wimp_open_wind(&e->data.o));
+      break;
+    case wimp_ECLOSE:
+      wimpt_noerr(wimp_close_wind(e->data.o.w));
+      break;
+    case wimp_EREDRAW:
+      main_redraw((wimp_redrawstr *) &e->data.o, wimp_redraw_wind);
+      break;
+    case wimp_EBUT:
+      main_buttonpress(&e->data.but.m);
+      break;
+    case wimp_ESEND:
+    case wimp_ESENDWANTACK:
+      switch (e->data.msg.hdr.action) {
+        case wimp_MDATALOAD:
+        case wimp_MDATAOPEN:
+          if (main_load()) {
+            showload();
+          }
+      }
+  }
 }
+
 /*************************************************************************
  *                          MENU FUNCTIONS                               *
  *************************************************************************/
-void reverseboard(void)
+void
+reverseboard(void)
 {
-toggleoption(whiteattop);
-set_board();
-set_data();
+  toggleoption(whiteattop);
+  set_board();
+  set_data();
 
-if (hilite[0].show) hilite_set(0,63-hilite[0].off);
-if (hilite[1].show) hilite_set(1,63-hilite[1].off);
+  if (hilite[0].show) {
+    hilite_set(0, 63 - hilite[0].off);
+  }
+  if (hilite[1].show) {
+    hilite_set(1, 63 - hilite[1].off);
+  }
 
-main_updatescreen();
-}
-/*************************************************************************/
-void clearboard(void)
-{
-int i;
-chesslib_newgame();
-for (i=0;i<64;i++)
-    {
-    color[i]=2;
-    board[i]=0;
-    }
-chesslib_setpiece(4,6,0);
-chesslib_setpiece(60,6,1);
-set_board();
-hilite_stop();
-if (MaxCnt!=-1)
-   {
-   GameCnt=MaxCnt=-1;
-   clearoption(blacksturn);
-   set_data();
-   set_thinking(1);
-   }
-set_board();
-main_updatescreen();
-}
-/*************************************************************************/
-void resetboard(void)
-{
-static int p[]={4,2,3,5,6,3,2,4};
-int i;
-chesslib_newgame();
-for (i=0;i<8;i++)
-    {
-    color[i]=0;board[i]=p[i];
-    color[i+8]=0;board[i+8]=1;
-    color[55-i]=1;board[55-i]=1;
-    color[63-i]=1;board[63-i]=p[7-i];
-    }
-for (i=16;i<48;i++)
-    {
-    color[i]=2;
-    board[i]=0;
-    }
-chesslib_setpiece(60,6,1);
-hilite_stop();
-if (MaxCnt!=-1)
-   {
-   GameCnt=MaxCnt=-1;
-   clearoption(blacksturn);
-   set_data();
-   set_thinking(1);
-   }
-set_board();
-main_updatescreen();
-}
-/*************************************************************************/
-BOOL edit_hilite(int icon)
-{
-wimp_icon i;
-wimpt_noerr(wimp_get_icon_info(edit_handle,icon,&i));
-return ((i.flags & wimp_ISELECTED)>0);
-}
-/*************************************************************************/
-void edit_event_handler(wimp_eventstr *e, void *handle)
-{
-wimp_w h=*(wimp_w*)handle;
-wimp_mousestr * m=&e->data.but.m;
-switch (e->e)
-       {
-       case wimp_EOPEN:   wimpt_noerr(wimp_open_wind(&e->data.o));
-                          break;
-       case wimp_ECLOSE:  wimpt_noerr(wimp_close_wind(h));
-                          win_register_event_handler(h,0,0);
-                          wimpt_noerr(wimp_delete_wind(h));
-                          win_settitle(main_handle,"Chess");
-                          main_menuon();
-                          hilite_stop();
-                          clearoption(editmode|game_started);
-                          save_board();
-                          break;
-       case wimp_EBUT:  if (!(m->bbits &~(wimp_BLEFT|wimp_BRIGHT))&& m->i>=0)
-                           {
-                           switch (m->i)
-                                  {
-                                  case 10: clearboard();
-                                           break;
-                                  case 11: resetboard();
-                                           break;
-                                  default:
-                                    edit_piece=(edit_hilite(m->i))?m->i:-1;
-                                  }
-                           }
-       }
-}
-/*************************************************************************/
-void editgame(void)
-{
-
-win_settitle(main_handle,"Edit Chess Board");
-wimpt_noerr(wimp_create_wind(template_syshandle("edit"),&edit_handle));
-win_register_event_handler(edit_handle,edit_event_handler,&edit_handle);
-main_menuoff();
-setoption(editmode);
-cancel_compthink(0);
-hilite_stop();
-openwin(edit_handle);
-edit_piece=-1;
-}
-/*************************************************************************/
-void step_event_handler(wimp_eventstr *e, void *handle)
-{
-wimp_w h=*(wimp_w*)handle;
-wimp_mousestr * m=&e->data.but.m;
-static int stepdir=0;
-static wimp_emask mask;
-switch (e->e)
-       {
-       case wimp_ENULL:   switch (stepdir)
-                                 {
-                                 case 1:if (GameCnt>=0) undomove();
-                                        else  stepdir=0;
-                                        break;
-                                 case 2:if (GameCnt<MaxCnt)
-                                           {
-                                           chesslib_redomove();
-                                           makemove();
-                                           }
-                                        else stepdir=0;
-                                }
-                          break;
-       case wimp_EOPEN:   wimpt_noerr(wimp_open_wind(&e->data.o));
-                          break;
-       case wimp_ECLOSE:  wimpt_noerr(wimp_close_wind(h));
-                          win_register_event_handler(h,0,0);
-                          wimpt_noerr(wimp_delete_wind(h));
-                          win_settitle(main_handle,"Chess");
-                          main_menuon();
-                          clearoption(stepmode|game_started);
-                          stepdir=0;
-                          if (mask)
-                             {
-                             event_setmask(mask);
-                             mask = (wimp_emask) 0;
-                             }
-                          save_board();
-                          break;
-       case wimp_EBUT:    if (!(m->bbits & wimp_BMID) && m->i>=0)
-                             {
-                             if (mask==0)
-                                {
-                                mask=event_getmask();
-                                event_setmask((wimp_emask) 0);
-                                }
-                             switch (m->i)
-                                    {
-                                    case 0: stepdir=1;
-                                            break;
-                                    case 1: if (GameCnt>=0) undomove();
-                                            stepdir=0;
-                                            break;
-                                    case 2: stepdir=0;
-                                            break;
-                                    case 3: if (GameCnt<MaxCnt)
-                                               {
-                                               chesslib_redomove();
-                                               makemove();
-                                               }
-                                            stepdir=0;
-                                            break;
-                                    case 4: stepdir=2;
-                                   }
-                             }
-       }
-}
-/*************************************************************************/
-void stepthro(void)
-{
-static wimp_w step_handle;
-
-win_settitle(main_handle,"Step Through Chess Game");
-wimpt_noerr(wimp_create_wind(template_syshandle("step"),&step_handle));
-win_register_event_handler(step_handle,step_event_handler,&step_handle);
-main_menuoff();
-win_claim_idle_events(step_handle);
-setoption(stepmode);
-cancel_compthink(0);
-hilite_stop();
-openwin(step_handle);
+  main_updatescreen();
 }
 
 /*************************************************************************/
-void new_game(void)
+void
+clearboard(void)
 {
-hilite_stop();
-chesslib_newgame();
-save_board();
-def.options = (opt_t) isoption(arcisblack|arciswhite|whiteattop|dobeep|hintoff);
-set_board();
-set_data();
-set_thinking(1);
-alarm_removeall(0);
-alarm_removeall((void *)1);
-alarm_removeall((void *)2);
-one_sec_event(0,(void *)-1);
-MaxCnt=-1;
+  int i;
+  chesslib_newgame();
+  for (i = 0; i < 64; i++) {
+    color[i] = 2;
+    board[i] = 0;
+  }
+  chesslib_setpiece(4, 6, 0);
+  chesslib_setpiece(60, 6, 1);
+  set_board();
+  hilite_stop();
+  if (MaxCnt != -1) {
+    GameCnt = MaxCnt = -1;
+    clearoption(blacksturn);
+    set_data();
+    set_thinking(1);
+  }
+  set_board();
+  main_updatescreen();
 }
+
 /*************************************************************************/
-void resettime(int i)
+void
+resetboard(void)
 {
-if (i)
-   {
-   int step=def.time*100;
-   int tim=0;
-   chesslib_setspeed(def.time);
-   for (i=0;i<=MaxCnt;i+=2)
-       {
-       tim+=step;
-       GameList[i].time=tim;
-       GameList[i+1].time=tim;
-       }
-   }
-set_data();
+  static int p[] = {4, 2, 3, 5, 6, 3, 2, 4};
+  int i;
+  chesslib_newgame();
+  for (i = 0; i < 8; i++) {
+    color[i] = 0;
+    board[i] = p[i];
+    color[i + 8] = 0;
+    board[i + 8] = 1;
+    color[55 - i] = 1;
+    board[55 - i] = 1;
+    color[63 - i] = 1;
+    board[63 - i] = p[7 - i];
+  }
+  for (i = 16; i < 48; i++) {
+    color[i] = 2;
+    board[i] = 0;
+  }
+  chesslib_setpiece(60, 6, 1);
+  hilite_stop();
+  if (MaxCnt != -1) {
+    GameCnt = MaxCnt = -1;
+    clearoption(blacksturn);
+    set_data();
+    set_thinking(1);
+  }
+  set_board();
+  main_updatescreen();
 }
+
 /*************************************************************************/
-void setup(void)
+BOOL
+edit_hilite(int icon)
 {
-dbox d;
-int reset;
-if (d=dbox_new("setup"),d!=NULL)
-   {
-   wimp_emask i=event_getmask();
-   dbox_field f;
-   dbox_setnumeric(d,1,def.time);
-   dbox_setnumeric(d,2,def.depth);
-   dbox_setnumeric(d,3,isoption(arcisblack));
-   dbox_setnumeric(d,4,isoption(arciswhite));
-   dbox_setnumeric(d,5,isoption(whiteattop));
-   dbox_setnumeric(d,6,isoption(dobeep));
-   dbox_setnumeric(d,7,isoption(hintoff));
-   dbox_show(d);
-   event_setmask((wimp_emask) 0);
-   f=dbox_fillin(d);
-   event_setmask(i);
-   if (f==8 || f==9)
-      {
-      reset=0;
-      if (dbox_getnumeric(d,1)!=def.time)
-         {
-         def.time=dbox_getnumeric(d,1);
-         cancel_compthink(0);
-         reset=TRUE;
-         }
-      if (dbox_getnumeric(d,2)!=def.depth)
-         {
-         def.depth=dbox_getnumeric(d,2);
-         if (def.depth>29) def.depth=29;
-         chesslib_setdepth(def.depth);
-         cancel_compthink(0);
-         reset=TRUE;
-         }
-      if (!(dbox_getnumeric(d,3)==(isoption(arcisblack)!=0)))
-         {
-         toggleoption(arcisblack);
-         if (isoption(arcisblack))
-            {
-            reset=TRUE;
-            if (isoption(blacksturn)) hilite_stop();
-            }
-         cancel_compthink(0);
-         }
-      if (!(dbox_getnumeric(d,4)==(isoption(arciswhite)!=0)))
-         {
-         toggleoption(arciswhite);
-         if (isoption(arciswhite))
-            {
-            reset=TRUE;
-            if (!isoption(blacksturn)) hilite_stop();
-            }
-         cancel_compthink(0);
-         hilite_stop();
-         }
-      if (!(dbox_getnumeric(d,5)==(isoption(whiteattop)!=0)))
-         {
-         reverseboard();
-         }
-      if (!(dbox_getnumeric(d,6)==(isoption(dobeep)!=0)))
-         {
-         toggleoption(dobeep);
-         }
-      if (!(dbox_getnumeric(d,7)==(isoption(hintoff)!=0)))
-         {
-         toggleoption(hintoff);
-         sprintf(ICONS[5].data.text,(isoption(hintoff))?"off":"none");
-         icon_update(&ICONS[5]);
-         }
-      resettime(reset);
-      if (f==8)
-         {
-         FILE *file;
-         if ((file=fopen("<chess$dir>.default","w"))!=0)
-            {
-            fprintf(file,"%d %d %x",def.time,def.depth,
-                         isoption(arcisblack|arciswhite|whiteattop|dobeep|hintoff));
-            fclose(file);
-            }
-         }
+  wimp_icon i;
+  wimpt_noerr(wimp_get_icon_info(edit_handle, icon, &i));
+  return ((i.flags & wimp_ISELECTED) > 0);
+}
+
+/*************************************************************************/
+void
+edit_event_handler(wimp_eventstr *e, void *handle)
+{
+  wimp_w h = *(wimp_w *) handle;
+  wimp_mousestr *m = &e->data.but.m;
+  switch (e->e) {
+    case wimp_EOPEN:
+      wimpt_noerr(wimp_open_wind(&e->data.o));
+      break;
+    case wimp_ECLOSE:
+      wimpt_noerr(wimp_close_wind(h));
+      win_register_event_handler(h, 0, 0);
+      wimpt_noerr(wimp_delete_wind(h));
+      win_settitle(main_handle, "Chess");
+      main_menuon();
+      hilite_stop();
+      clearoption(editmode | game_started);
+      save_board();
+      break;
+    case wimp_EBUT:
+      if (!(m->bbits & ~(wimp_BLEFT | wimp_BRIGHT)) && m->i >= 0) {
+        switch (m->i) {
+          case 10:
+            clearboard();
+            break;
+          case 11:
+            resetboard();
+            break;
+          default:
+            edit_piece = (edit_hilite(m->i)) ? m->i : -1;
+        }
       }
-   dbox_dispose(&d);
-   }
+  }
 }
-/*************************************************************************/
-static void main_menuproc(void *handle,char *hit)
-{
-handle=handle;
-switch (hit[0])
-       {
-       case 1: editgame();
-               break;
-       case 2: stepthro();
-               break;
-       case 3: if (!cancel_compthink(comp_newgame))
-                  {
-                  new_game();
-                  main_updatescreen();
-                  }
-               break;
-       case 4: setup();
-               break;
-       case 5: main_save();
-               break;
-       case 6: main_print();
-       }
-}
-/*************************************************************************/
-BOOL main_menuon(void)
-{
-return(event_attachmenu(main_handle,main_menu,main_menuproc,0));
-}
-/*************************************************************************/
-BOOL main_menuoff(void)
-{
-return(event_attachmenu(main_handle,0,0,0));
-}
-/*************************************************************************/
-void set_defaults(void)
-{
-FILE *file;
-if ((file=fopen("<chess$dir>.default","r"))!=0)
-    {
-    fscanf(file,"%d %d %x",&def.time,&def.depth,&def.options);
-    fclose(file);
-    }
-else
-    {
-    def.options=arcisblack;
-    def.time=5;
-    def.depth=10;
-    }
-chesslib_setdepth(def.depth);
-chesslib_setspeed(def.time);
-}
-/*************************************************************************/
-static void init_mainwin(void)
-{
-wimp_wind *w;
-int error;
 
-if (w=template_syshandle("main"),w!=0)
-   {
-    BOARD=(wimp_icon*)&w[1];
-    ICONS=BOARD+12;
-    BOARD+=31;
-    w->nicons=12;
-    wimpt_noerr(wimp_create_wind(w,&main_handle));
-   }
-win_register_event_handler(main_handle,main_event_handler,0);
-win_claim_unknown_events(main_handle);
-hilite[0].on=&BOARD[64];
-hilite[1].on=&BOARD[65];
-TURNON=ICONS[0].flags;
-TURNOFF=ICONS[8].flags;
-set_defaults();
-openwin(main_handle);
-one_sec_event(0,(void*)-1);
-if (error=(int)(main_menu=menu_new("Chess","Edit Board,Step Thro' Game|New Game|>Setup,>Save Game,Print Game")),error!= NULL)
-   {
-   error=main_menuon();
-   }
-if (error==NULL) werr(1,"No room for main menu");
+/*************************************************************************/
+void
+editgame(void)
+{
+
+  win_settitle(main_handle, "Edit Chess Board");
+  wimpt_noerr(wimp_create_wind(template_syshandle("edit"), &edit_handle));
+  win_register_event_handler(edit_handle, edit_event_handler, &edit_handle);
+  main_menuoff();
+  setoption(editmode);
+  cancel_compthink(0);
+  hilite_stop();
+  openwin(edit_handle);
+  edit_piece = -1;
 }
+
+/*************************************************************************/
+void
+step_event_handler(wimp_eventstr *e, void *handle)
+{
+  wimp_w h = *(wimp_w *) handle;
+  wimp_mousestr *m = &e->data.but.m;
+  static int stepdir = 0;
+  static wimp_emask mask;
+  switch (e->e) {
+    case wimp_ENULL:
+      switch (stepdir) {
+        case 1:
+          if (GameCnt >= 0) {
+            undomove();
+          } else {
+            stepdir = 0;
+          }
+          break;
+        case 2:
+          if (GameCnt < MaxCnt) {
+            chesslib_redomove();
+            makemove();
+          } else {
+            stepdir = 0;
+          }
+      }
+      break;
+    case wimp_EOPEN:
+      wimpt_noerr(wimp_open_wind(&e->data.o));
+      break;
+    case wimp_ECLOSE:
+      wimpt_noerr(wimp_close_wind(h));
+      win_register_event_handler(h, 0, 0);
+      wimpt_noerr(wimp_delete_wind(h));
+      win_settitle(main_handle, "Chess");
+      main_menuon();
+      clearoption(stepmode | game_started);
+      stepdir = 0;
+      if (mask) {
+        event_setmask(mask);
+        mask = (wimp_emask) 0;
+      }
+      save_board();
+      break;
+    case wimp_EBUT:
+      if (!(m->bbits & wimp_BMID) && m->i >= 0) {
+        if (mask == 0) {
+          mask = event_getmask();
+          event_setmask((wimp_emask) 0);
+        }
+        switch (m->i) {
+          case 0:
+            stepdir = 1;
+            break;
+          case 1:
+            if (GameCnt >= 0) {
+              undomove();
+            }
+            stepdir = 0;
+            break;
+          case 2:
+            stepdir = 0;
+            break;
+          case 3:
+            if (GameCnt < MaxCnt) {
+              chesslib_redomove();
+              makemove();
+            }
+            stepdir = 0;
+            break;
+          case 4:
+            stepdir = 2;
+        }
+      }
+  }
+}
+
+/*************************************************************************/
+void
+stepthro(void)
+{
+  static wimp_w step_handle;
+
+  win_settitle(main_handle, "Step Through Chess Game");
+  wimpt_noerr(wimp_create_wind(template_syshandle("step"), &step_handle));
+  win_register_event_handler(step_handle, step_event_handler, &step_handle);
+  main_menuoff();
+  win_claim_idle_events(step_handle);
+  setoption(stepmode);
+  cancel_compthink(0);
+  hilite_stop();
+  openwin(step_handle);
+}
+
+/*************************************************************************/
+void
+new_game(void)
+{
+  hilite_stop();
+  chesslib_newgame();
+  save_board();
+  def.options =
+      (opt_t) isoption(arcisblack | arciswhite | whiteattop | dobeep | hintoff);
+  set_board();
+  set_data();
+  set_thinking(1);
+  alarm_removeall(0);
+  alarm_removeall((void *) 1);
+  alarm_removeall((void *) 2);
+  one_sec_event(0, (void *) -1);
+  MaxCnt = -1;
+}
+
+/*************************************************************************/
+void
+resettime(int i)
+{
+  if (i) {
+    int step = def.time * 100;
+    int tim = 0;
+    chesslib_setspeed(def.time);
+    for (i = 0; i <= MaxCnt; i += 2) {
+      tim += step;
+      GameList[i].time = tim;
+      GameList[i + 1].time = tim;
+    }
+  }
+  set_data();
+}
+
+/*************************************************************************/
+void
+setup(void)
+{
+  dbox d;
+  int reset;
+  if (d = dbox_new("setup"), d != NULL) {
+    wimp_emask i = event_getmask();
+    dbox_field f;
+    dbox_setnumeric(d, 1, def.time);
+    dbox_setnumeric(d, 2, def.depth);
+    dbox_setnumeric(d, 3, isoption(arcisblack));
+    dbox_setnumeric(d, 4, isoption(arciswhite));
+    dbox_setnumeric(d, 5, isoption(whiteattop));
+    dbox_setnumeric(d, 6, isoption(dobeep));
+    dbox_setnumeric(d, 7, isoption(hintoff));
+    dbox_show(d);
+    event_setmask((wimp_emask) 0);
+    f = dbox_fillin(d);
+    event_setmask(i);
+    if (f == 8 || f == 9) {
+      reset = 0;
+      if (dbox_getnumeric(d, 1) != def.time) {
+        def.time = dbox_getnumeric(d, 1);
+        cancel_compthink(0);
+        reset = TRUE;
+      }
+      if (dbox_getnumeric(d, 2) != def.depth) {
+        def.depth = dbox_getnumeric(d, 2);
+        if (def.depth > 29) {
+          def.depth = 29;
+        }
+        chesslib_setdepth(def.depth);
+        cancel_compthink(0);
+        reset = TRUE;
+      }
+      if (!(dbox_getnumeric(d, 3) == (isoption(arcisblack) != 0))) {
+        toggleoption(arcisblack);
+        if (isoption(arcisblack)) {
+          reset = TRUE;
+          if (isoption(blacksturn)) {
+            hilite_stop();
+          }
+        }
+        cancel_compthink(0);
+      }
+      if (!(dbox_getnumeric(d, 4) == (isoption(arciswhite) != 0))) {
+        toggleoption(arciswhite);
+        if (isoption(arciswhite)) {
+          reset = TRUE;
+          if (!isoption(blacksturn)) {
+            hilite_stop();
+          }
+        }
+        cancel_compthink(0);
+        hilite_stop();
+      }
+      if (!(dbox_getnumeric(d, 5) == (isoption(whiteattop) != 0))) {
+        reverseboard();
+      }
+      if (!(dbox_getnumeric(d, 6) == (isoption(dobeep) != 0))) {
+        toggleoption(dobeep);
+      }
+      if (!(dbox_getnumeric(d, 7) == (isoption(hintoff) != 0))) {
+        toggleoption(hintoff);
+        sprintf(ICONS[5].data.text, (isoption(hintoff)) ? "off" : "none");
+        icon_update(&ICONS[5]);
+      }
+      resettime(reset);
+      if (f == 8) {
+        FILE *file;
+        if ((file = fopen("<chess$dir>.default", "w")) != 0) {
+          fprintf(file, "%d %d %x", def.time, def.depth,
+                  isoption(arcisblack | arciswhite | whiteattop | dobeep |
+                           hintoff));
+          fclose(file);
+        }
+      }
+    }
+    dbox_dispose(&d);
+  }
+}
+
+/*************************************************************************/
+static void
+main_menuproc(void *handle, char *hit)
+{
+  handle = handle;
+  switch (hit[0]) {
+    case 1:
+      editgame();
+      break;
+    case 2:
+      stepthro();
+      break;
+    case 3:
+      if (!cancel_compthink(comp_newgame)) {
+        new_game();
+        main_updatescreen();
+      }
+      break;
+    case 4:
+      setup();
+      break;
+    case 5:
+      main_save();
+      break;
+    case 6:
+      main_print();
+  }
+}
+
+/*************************************************************************/
+BOOL
+main_menuon(void)
+{
+  return (event_attachmenu(main_handle, main_menu, main_menuproc, 0));
+}
+
+/*************************************************************************/
+BOOL
+main_menuoff(void)
+{
+  return (event_attachmenu(main_handle, 0, 0, 0));
+}
+
+/*************************************************************************/
+void
+set_defaults(void)
+{
+  FILE *file;
+  if ((file = fopen("<chess$dir>.default", "r")) != 0) {
+    fscanf(file, "%d %d %x", &def.time, &def.depth, &def.options);
+    fclose(file);
+  } else {
+    def.options = arcisblack;
+    def.time = 5;
+    def.depth = 10;
+  }
+  chesslib_setdepth(def.depth);
+  chesslib_setspeed(def.time);
+}
+
+/*************************************************************************/
+static void
+init_mainwin(void)
+{
+  wimp_wind *w;
+  int error;
+
+  if (w = template_syshandle("main"), w != 0) {
+    BOARD = (wimp_icon *) &w[1];
+    ICONS = BOARD + 12;
+    BOARD += 31;
+    w->nicons = 12;
+    wimpt_noerr(wimp_create_wind(w, &main_handle));
+  }
+  win_register_event_handler(main_handle, main_event_handler, 0);
+  win_claim_unknown_events(main_handle);
+  hilite[0].on = &BOARD[64];
+  hilite[1].on = &BOARD[65];
+  TURNON = ICONS[0].flags;
+  TURNOFF = ICONS[8].flags;
+  set_defaults();
+  openwin(main_handle);
+  one_sec_event(0, (void *) -1);
+  if (error = (int) (main_menu = menu_new("Chess",
+                                          "Edit Board,Step Thro' Game|New "
+                                          "Game|>Setup,>Save Game,Print Game")),
+      error != NULL) {
+    error = main_menuon();
+  }
+  if (error == NULL) {
+    werr(1, "No room for main menu");
+  }
+}
+
 /*************************************************************************
  *                        ICON BAR FUNCTIONS                             *
  *************************************************************************/
-static void bar_iconclick(wimp_i icon)
+static void
+bar_iconclick(wimp_i icon)
 {
-icon=icon;
-openwin(main_handle);
+  icon = icon;
+  openwin(main_handle);
 }
+
 /*************************************************************************/
-static void bar_info(void)
+static void
+bar_info(void)
 {
-dbox d;
-if (d=dbox_new("progInfo"),d!=NULL)
-   {
-   dbox_setfield(d,4,Version_string);
-   dbox_show(d);
-   dbox_fillin(d);
-   dbox_dispose(&d);
-   }
+  dbox d;
+  if (d = dbox_new("progInfo"), d != NULL) {
+    dbox_setfield(d, 4, Version_string);
+    dbox_show(d);
+    dbox_fillin(d);
+    dbox_dispose(&d);
+  }
 }
+
 /*************************************************************************/
-static void bar_menuproc(void *handle,char *hit)
+static void
+bar_menuproc(void *handle, char *hit)
 {
-handle = handle;
-switch (hit[0])
-       {
-       case 1: bar_info();
-               break;
-       case 2: exit(0);
-       }
+  handle = handle;
+  switch (hit[0]) {
+    case 1:
+      bar_info();
+      break;
+    case 2:
+      exit(0);
+  }
 }
+
 /*************************************************************************/
-static void init_bar(void)
+static void
+init_bar(void)
 {
-int error;
-if (error=(int)(bar_menu=menu_new("Chess",">Info,Quit")),error!= NULL)
-   {
-   baricon("!chess",(int)resspr_area(),bar_iconclick);
-   error=event_attachmenu(win_ICONBAR,bar_menu,bar_menuproc,0);
-   }
-if (error==NULL) werr(1,"No room for baricon");
+  int error;
+  if (error = (int) (bar_menu = menu_new("Chess", ">Info,Quit")),
+      error != NULL) {
+    baricon("!chess", (int) resspr_area(), bar_iconclick);
+    error = event_attachmenu(win_ICONBAR, bar_menu, bar_menuproc, 0);
+  }
+  if (error == NULL) {
+    werr(1, "No room for baricon");
+  }
 }
+
 /*************************************************************************
  *                           INITIALISE                                  *
  *************************************************************************/
-static void initialise(void)
+static void
+initialise(void)
 {
-wimpt_init("Chess");
-res_init("chess");
-resspr_init();
-template_init();
-alarm_init();
-init_bar();
-init_mainwin();
-chesslib_init("<chess$dir>.book");
-new_game();
+  wimpt_init("Chess");
+  res_init("chess");
+  resspr_init();
+  template_init();
+  alarm_init();
+  init_bar();
+  init_mainwin();
+  chesslib_init("<chess$dir>.book");
+  new_game();
 }
+
 /*************************************************************************
  *                          MAIN PROGRAMME                               *
  *************************************************************************/
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
-initialise();
-if (argc==2)
-   {
+  initialise();
+  if (argc == 2) {
     runload(argv[1]);
     showload();
-    }
-for (;;)
-    {
+  }
+  for (;;) {
     event_process();
-    }
-return(0);
+  }
+  return (0);
 }
