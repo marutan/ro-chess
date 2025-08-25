@@ -2,238 +2,272 @@
 #include "chesslib.h"
 #include "chesssave.h"
 #include "event.h"
+#include "messages.h"
 #include "os.h"
 #include "saveas.h"
 #include "wimp.h"
-#include "xfersend.h"
 #include "xferrecv.h"
-#include "messages.h"
-#include <string.h>
+#include "xfersend.h"
 #include <stdio.h>
-char savefile[256]="Chessfile";
-int sending=0;
+#include <string.h>
+char savefile[256] = "Chessfile";
+int sending = 0;
 extern int epsquare;
-int saveboard[64],savecolour[64];
-int saverookpos[2][2],saverookmoved[2][2];
-int savekingmoved[2],savecastld[2];
+int saveboard[64], savecolour[64];
+int saverookpos[2][2], saverookmoved[2][2];
+int savekingmoved[2], savecastld[2];
+
 /*************************************************************************
  *                            SAVE FUNCTIONS                             *
  *************************************************************************/
-void save_board(void)
+void
+save_board(void)
 {
-int *pf=board;
-int *pt=saveboard;
-int i;
-for(i=0;i<64;i++) *pt++ = *pf++;
-pf=color;
-pt=savecolour;
-for(i=0;i<64;i++) *pt++ = *pf++;
-SaveCnt=GameCnt;
-saverookmoved[0][0]=rookmoved[0][0];
-saverookmoved[0][1]=rookmoved[0][1];
-saverookmoved[1][0]=rookmoved[1][0];
-saverookmoved[1][1]=rookmoved[1][1];
-saverookpos[0][0]=rookpos[0][0];
-saverookpos[0][1]=rookpos[0][1];
-saverookpos[1][0]=rookpos[1][0];
-saverookpos[1][1]=rookpos[1][1];
-savekingmoved[0]=kingmoved[0];
-savekingmoved[1]=kingmoved[1];
-savecastld[0]=castld[0];
-savecastld[1]=castld[1];
+  int *pf = board;
+  int *pt = saveboard;
+  int i;
+  for (i = 0; i < 64; i++) {
+    *pt++ = *pf++;
+  }
+  pf = color;
+  pt = savecolour;
+  for (i = 0; i < 64; i++) {
+    *pt++ = *pf++;
+  }
+  SaveCnt = GameCnt;
+  saverookmoved[0][0] = rookmoved[0][0];
+  saverookmoved[0][1] = rookmoved[0][1];
+  saverookmoved[1][0] = rookmoved[1][0];
+  saverookmoved[1][1] = rookmoved[1][1];
+  saverookpos[0][0] = rookpos[0][0];
+  saverookpos[0][1] = rookpos[0][1];
+  saverookpos[1][0] = rookpos[1][0];
+  saverookpos[1][1] = rookpos[1][1];
+  savekingmoved[0] = kingmoved[0];
+  savekingmoved[1] = kingmoved[1];
+  savecastld[0] = castld[0];
+  savecastld[1] = castld[1];
 }
-/*************************************************************************/
-BOOL save_dosend(char* filename,void *handle)
-{
-int i,p,count;
-FILE *file;
-char buf[30];
-sending=FALSE;
-count=SaveCnt;
-handle=handle;
-if ((file=fopen(filename,"w"))!=0)
-   {
-   fprintf(file,"        White    :    Black\n");
-   for (i=0;i<=count;i++)
-       {
-       fprintf(file,"%3d: ",(i+2)>>1);
-       p=movetoalg(buf,GameList[i].gmove,GameList[i].flags);
-       i++;
-       if (i<=count)
-          {
-          while (p<12) buf[p++]=' ';
-          buf[p++]=':';buf[p++]=' ';
-          movetoalg(&buf[p],GameList[i].gmove,GameList[i].flags);
-          }
-       fprintf(file,"%s\n",buf);
-       }
-   fclose(file);
-   return(TRUE);
-   }
-return(FALSE);
-}
-/*************************************************************************/
-BOOL save_save(char* filename,void *handle)
-{
-FILE *file;
-int i,count;
-os_filestr f;
-struct GameRec *g;
-count=SaveCnt;
-handle=handle;
 
-if (sending) return(save_dosend(filename,handle));
-if ((file=fopen(filename,"w"))!=0)
-   {
-   strcpy(savefile,filename);
-   fprintf(file,"%d\n\n",count);
-   fprintf(file,"%d %d %x\n\n",def.time,def.depth,isoption(arcisblack|arciswhite));
-   for (i=0;i<=count;i++)
-       {
-       g=&GameList[i];
-       fprintf(file,"%x %x %x %x ",g->gmove,g->piece,g->color,g->flags);
-       fprintf(file,"%x %x ",g->svf,g->svt);
-       fprintf(file,"%x %x %x ",g->depth,g->score,g->time);
-       fprintf(file,"%x %x\n",g->prompiece,g->epsquare); /* missed */
-       }
-   for (i=0;i<64;i++)
-       {
-       if ((i&7)==0) fprintf(file,"\n");
-       fprintf(file,"%d",saveboard[i]);
-       }
-   fprintf(file,"\n");
-   for (i=0;i<64;i++)
-       {
-       if ((i&7)==0) fprintf(file,"\n");
-       fprintf(file,"%d",savecolour[i]);
-       }
-   fprintf(file,"\n");
-   fprintf(file,"\n");
-   fprintf(file,"%x %x %x %x\n",saverookmoved[0][0],saverookmoved[0][1],
-                                saverookmoved[1][0],saverookmoved[1][1]);
-   fprintf(file,"%x %x %x %x\n",saverookpos[0][0],saverookpos[0][1],
-                                saverookpos[1][0],saverookpos[1][1]);
-   fprintf(file,"%x %x %x %x\n",savecastld[0],savecastld[1],
-                                savekingmoved[0],savekingmoved[1]);
-   fclose(file);
-   f.action=18;
-   f.name=savefile;
-   f.loadaddr=CHESSTYPE;
-   os_file(&f);
-   return(TRUE);
-   }
-mess_message("Disc or file PROTECTED");
-return(FALSE);
-}
 /*************************************************************************/
-BOOL save_print(char* filename,void *handle)
+BOOL
+save_dosend(char *filename, void *handle)
 {
-handle=handle;
-filename=filename;
-if (mess_confirm("Switch On Printer")) save_dosend("printer:",0);
-return(-1);
-}
-/*************************************************************************/
-BOOL save_send(void *handle,int *maxbuf)
-{
-handle=handle;
-maxbuf=maxbuf;
-sending=TRUE;
-return(FALSE);
-}
-/*************************************************************************/
-void main_save(void)
-{
-wimp_emask i=event_getmask();
-event_setmask((wimp_emask) 0);
-saveas(CHESSTYPE,savefile,0,save_save,save_send,save_print,0);
-event_setmask(i);
-}
-/*************************************************************************/
-void main_print(void)
-{
-save_print("",0);
-}
-/*************************************************************************/
-void load_file(void)
-{
-FILE *file;
-int i;
-struct GameRec *g=0;
-int opt;
-new_game();
-file=fopen(savefile,"r");
-fscanf(file,"%d",&GameCnt);
-fscanf(file,"%d %d %x",&def.time,&def.depth,&opt);
-for (i=0;i<=GameCnt;i++)
-    {
-    g=&GameList[i];
-    fscanf(file,"%x %x %x %x ",&g->gmove,&g->piece,&g->color,&g->flags);
-    fscanf(file,"%x %x",&g->svf,&g->svt);
-    fscanf(file,"%x %x %x",&g->depth,&g->score,&g->time);
-    fscanf(file,"%x %x",&g->prompiece,&g->epsquare); /* missed */
+  int i, p, count;
+  FILE *file;
+  char buf[30];
+  sending = FALSE;
+  count = SaveCnt;
+  handle = handle;
+  if ((file = fopen(filename, "w")) != 0) {
+    fprintf(file, "        White    :    Black\n");
+    for (i = 0; i <= count; i++) {
+      fprintf(file, "%3d: ", (i + 2) >> 1);
+      p = movetoalg(buf, GameList[i].gmove, GameList[i].flags);
+      i++;
+      if (i <= count) {
+        while (p < 12) {
+          buf[p++] = ' ';
+        }
+        buf[p++] = ':';
+        buf[p++] = ' ';
+        movetoalg(&buf[p], GameList[i].gmove, GameList[i].flags);
+      }
+      fprintf(file, "%s\n", buf);
     }
-for (i=0;i<64;i++)
-    {
-    fscanf(file,"%1d",&board[i]);
-    }
-for (i=0;i<64;i++)
-    {
-    fscanf(file,"%1d",&color[i]);
-    }
-   fscanf(file,"%x %x %x %x",&rookmoved[0][0],&rookmoved[0][1],
-                             &rookmoved[1][0],&rookmoved[1][1]);
-   fscanf(file,"%x %x %x %x",&rookpos[0][0],&rookpos[0][1],
-                             &rookpos[1][0],&rookpos[1][1]);
-   fscanf(file,"%x %x %x %x",&castld[0],&castld[1],
-                             &kingmoved[0],&kingmoved[1]);
-fclose(file);
-epsquare=(g)?g->epsquare:-1;/* allows for saved position with pending enpassant */
-chesslib_setpiece(0,board[0],color[0]);
-clearoption(arcisblack|arciswhite);
-setoption(opt|i);
-chesslib_setspeed(def.time);
-chesslib_setdepth(def.depth);
-save_board();
+    fclose(file);
+    return (TRUE);
+  }
+  return (FALSE);
 }
-/*************************************************************************/
-BOOL validfile(char *filename, int type)
-{
-os_filestr filedata;
-filedata.action=5;
-filedata.name=filename;
-if (os_file(&filedata)) return(FALSE);
-return(((filedata.loadaddr & 0xfff00)>>8)==type);
-}
-/*************************************************************************/
-void runload(char *filename)
-{
-if (validfile(filename,CHESSTYPE))
-   {
-   strcpy(savefile,filename);
-   load_file();
-   }
-}
-/*************************************************************************/
-BOOL main_load(void)
-{
-FILE *file;
-char *filename;
-int i=TRUE;
-if (isoption(stepmode|editmode))
-   {
-   if (xferrecv_checkinsert(&filename)==CHESSTYPE) xferrecv_insertfileok();
-   return(FALSE);
-   }
 
-if (xferrecv_checkinsert(&filename)!=CHESSTYPE) return(FALSE);
-if (file=fopen(filename,"r"),file!=0)
-   {
-   fclose(file);
-   strcpy(savefile,filename);
-   i=cancel_compthink(loading);
-   if (!i) load_file();
-   }
-xferrecv_insertfileok();
-return(!i);
+/*************************************************************************/
+BOOL
+save_save(char *filename, void *handle)
+{
+  FILE *file;
+  int i, count;
+  os_filestr f;
+  struct GameRec *g;
+  count = SaveCnt;
+  handle = handle;
+
+  if (sending) {
+    return (save_dosend(filename, handle));
+  }
+  if ((file = fopen(filename, "w")) != 0) {
+    strcpy(savefile, filename);
+    fprintf(file, "%d\n\n", count);
+    fprintf(file, "%d %d %x\n\n", def.time, def.depth,
+            isoption(arcisblack | arciswhite));
+    for (i = 0; i <= count; i++) {
+      g = &GameList[i];
+      fprintf(file, "%x %x %x %x ", g->gmove, g->piece, g->color, g->flags);
+      fprintf(file, "%x %x ", g->svf, g->svt);
+      fprintf(file, "%x %x %x ", g->depth, g->score, g->time);
+      fprintf(file, "%x %x\n", g->prompiece, g->epsquare); /* missed */
+    }
+    for (i = 0; i < 64; i++) {
+      if ((i & 7) == 0) {
+        fprintf(file, "\n");
+      }
+      fprintf(file, "%d", saveboard[i]);
+    }
+    fprintf(file, "\n");
+    for (i = 0; i < 64; i++) {
+      if ((i & 7) == 0) {
+        fprintf(file, "\n");
+      }
+      fprintf(file, "%d", savecolour[i]);
+    }
+    fprintf(file, "\n");
+    fprintf(file, "\n");
+    fprintf(file, "%x %x %x %x\n", saverookmoved[0][0], saverookmoved[0][1],
+            saverookmoved[1][0], saverookmoved[1][1]);
+    fprintf(file, "%x %x %x %x\n", saverookpos[0][0], saverookpos[0][1],
+            saverookpos[1][0], saverookpos[1][1]);
+    fprintf(file, "%x %x %x %x\n", savecastld[0], savecastld[1],
+            savekingmoved[0], savekingmoved[1]);
+    fclose(file);
+    f.action = 18;
+    f.name = savefile;
+    f.loadaddr = CHESSTYPE;
+    os_file(&f);
+    return (TRUE);
+  }
+  mess_message("Disc or file PROTECTED");
+  return (FALSE);
+}
+
+/*************************************************************************/
+BOOL
+save_print(char *filename, void *handle)
+{
+  handle = handle;
+  filename = filename;
+  if (mess_confirm("Switch On Printer")) {
+    save_dosend("printer:", 0);
+  }
+  return (-1);
+}
+
+/*************************************************************************/
+BOOL
+save_send(void *handle, int *maxbuf)
+{
+  handle = handle;
+  maxbuf = maxbuf;
+  sending = TRUE;
+  return (FALSE);
+}
+
+/*************************************************************************/
+void
+main_save(void)
+{
+  wimp_emask i = event_getmask();
+  event_setmask((wimp_emask) 0);
+  saveas(CHESSTYPE, savefile, 0, save_save, save_send, save_print, 0);
+  event_setmask(i);
+}
+
+/*************************************************************************/
+void
+main_print(void)
+{
+  save_print("", 0);
+}
+
+/*************************************************************************/
+void
+load_file(void)
+{
+  FILE *file;
+  int i;
+  struct GameRec *g = 0;
+  int opt;
+  new_game();
+  file = fopen(savefile, "r");
+  fscanf(file, "%d", &GameCnt);
+  fscanf(file, "%d %d %x", &def.time, &def.depth, &opt);
+  for (i = 0; i <= GameCnt; i++) {
+    g = &GameList[i];
+    fscanf(file, "%x %x %x %x ", &g->gmove, &g->piece, &g->color, &g->flags);
+    fscanf(file, "%x %x", &g->svf, &g->svt);
+    fscanf(file, "%x %x %x", &g->depth, &g->score, &g->time);
+    fscanf(file, "%x %x", &g->prompiece, &g->epsquare); /* missed */
+  }
+  for (i = 0; i < 64; i++) {
+    fscanf(file, "%1d", &board[i]);
+  }
+  for (i = 0; i < 64; i++) {
+    fscanf(file, "%1d", &color[i]);
+  }
+  fscanf(file, "%x %x %x %x", &rookmoved[0][0], &rookmoved[0][1],
+         &rookmoved[1][0], &rookmoved[1][1]);
+  fscanf(file, "%x %x %x %x", &rookpos[0][0], &rookpos[0][1], &rookpos[1][0],
+         &rookpos[1][1]);
+  fscanf(file, "%x %x %x %x", &castld[0], &castld[1], &kingmoved[0],
+         &kingmoved[1]);
+  fclose(file);
+  epsquare = (g) ? g->epsquare
+                 : -1; /* allows for saved position with pending enpassant */
+  chesslib_setpiece(0, board[0], color[0]);
+  clearoption(arcisblack | arciswhite);
+  setoption(opt | i);
+  chesslib_setspeed(def.time);
+  chesslib_setdepth(def.depth);
+  save_board();
+}
+
+/*************************************************************************/
+BOOL
+validfile(char *filename, int type)
+{
+  os_filestr filedata;
+  filedata.action = 5;
+  filedata.name = filename;
+  if (os_file(&filedata)) {
+    return (FALSE);
+  }
+  return (((filedata.loadaddr & 0xfff00) >> 8) == type);
+}
+
+/*************************************************************************/
+void
+runload(char *filename)
+{
+  if (validfile(filename, CHESSTYPE)) {
+    strcpy(savefile, filename);
+    load_file();
+  }
+}
+
+/*************************************************************************/
+BOOL
+main_load(void)
+{
+  FILE *file;
+  char *filename;
+  int i = TRUE;
+  if (isoption(stepmode | editmode)) {
+    if (xferrecv_checkinsert(&filename) == CHESSTYPE) {
+      xferrecv_insertfileok();
+    }
+    return (FALSE);
+  }
+
+  if (xferrecv_checkinsert(&filename) != CHESSTYPE) {
+    return (FALSE);
+  }
+  if (file = fopen(filename, "r"), file != 0) {
+    fclose(file);
+    strcpy(savefile, filename);
+    i = cancel_compthink(loading);
+    if (!i) {
+      load_file();
+    }
+  }
+  xferrecv_insertfileok();
+  return (!i);
 }
