@@ -201,9 +201,10 @@ static void
 set_time(int i, int t)
 {
   int h, m;
+
   m = t / 60;
   h = m / 60;
-  sprintf(ICONS[i].data.text, "%2d:%2d:%02d", h, m % 60, t % 60);
+  sprintf(ICONS[i].data.text, "%2d:%02d:%02d", h, m % 60, t % 60);
   icon_update(&ICONS[i]);
 }
 
@@ -230,6 +231,7 @@ writeclocks(int count)
   int t;
   int i;
   int h, m;
+
   m = (count & 1);
   t = (count < 0) ? 0 : GameList[count].time;
   i = ((m == 1 && isoption(whiteattop)) || (m == 0 && !isoption(whiteattop)))
@@ -238,7 +240,7 @@ writeclocks(int count)
   t = t / 100;
   m = t / 60;
   h = m / 60;
-  sprintf(ICONS[i].data.text, "%2d:%2d:%02d", h, m % 60, t % 60);
+  sprintf(ICONS[i].data.text, "%2d:%02d:%02d", h, m % 60, t % 60);
   icon_update(&ICONS[i]);
 }
 
@@ -314,7 +316,7 @@ static void
 timeicon(int i, int c)
 {
   if (c < 0) {
-    strcpy(ICONS[i].data.text, " 0: 0:00");
+    strcpy(ICONS[i].data.text, " 0:00:00");
     icon_update(&ICONS[i]);
   } else {
     set_time(i, GameList[c].time / 100);
