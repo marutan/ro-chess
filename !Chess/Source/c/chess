@@ -361,11 +361,11 @@ set_board(void)
   for (i = 0; i < 64; i++) {
     j = (wt) ? (7 - (i & 7)) + (i & ~7) : (i & 7) + (56 - (i & ~7));
     switch (color[i]) {
-      case 2:
+      case neutral:
         sprintf(&BOARD[j].data.text[1], "space");
         break;
       default:
-        sprintf(&BOARD[j].data.text[1], "%c%s", color[i] ? 'b' : 'w',
+        sprintf(&BOARD[j].data.text[1], "%c%s", color[i] == black ? 'b' : 'w',
                 pname[board[i]]);
     }
   }
@@ -721,7 +721,7 @@ setpiece(int icon, int piece, int side)
   if (side == neutral) {
     strcpy(&BOARD[icon].data.text[1], "space");
   } else {
-    sprintf(&BOARD[icon].data.text[1], "%c%s", (side) ? 'b' : 'w',
+    sprintf(&BOARD[icon].data.text[1], "%c%s", (side == black) ? 'b' : 'w',
             pname[piece]);
   }
   chesslib_setpiece(icontomove(icon), piece, side);
@@ -1035,11 +1035,11 @@ clearboard(void)
 
   chesslib_newgame();
   for (i = 0; i < 64; i++) {
-    color[i] = 2;
-    board[i] = 0;
+    color[i] = neutral;
+    board[i] = no_piece;
   }
-  chesslib_setpiece(4, 6, 0);
-  chesslib_setpiece(60, 6, 1);
+  chesslib_setpiece(4, king, white);
+  chesslib_setpiece(60, king, black);
   set_board();
   hilite_stop();
   if (MaxCnt != -1) {
@@ -1056,25 +1056,25 @@ clearboard(void)
 static void
 resetboard(void)
 {
-  static int p[] = {4, 2, 3, 5, 6, 3, 2, 4};
+  static int p[] = {rook, knight, bishop, queen, king, bishop, knight, rook};
   int i;
 
   chesslib_newgame();
   for (i = 0; i < 8; i++) {
-    color[i] = 0;
+    color[i] = white;
     board[i] = p[i];
-    color[i + 8] = 0;
-    board[i + 8] = 1;
-    color[55 - i] = 1;
-    board[55 - i] = 1;
-    color[63 - i] = 1;
+    color[i + 8] = white;
+    board[i + 8] = pawn;
+    color[55 - i] = black;
+    board[55 - i] = pawn;
+    color[63 - i] = black;
     board[63 - i] = p[7 - i];
   }
   for (i = 16; i < 48; i++) {
-    color[i] = 2;
-    board[i] = 0;
+    color[i] = neutral;
+    board[i] = no_piece;
   }
-  chesslib_setpiece(60, 6, 1);
+  chesslib_setpiece(60, king, black);
   hilite_stop();
   if (MaxCnt != -1) {
     GameCnt = MaxCnt = -1;
@@ -1491,7 +1491,7 @@ bar_menuproc(void *handle, char *hit)
       bar_info();
       break;
     case 2:
-      exit(0);
+      exit(EXIT_SUCCESS);
   }
 }
 
