@@ -24,7 +24,7 @@
 #include <string.h>
 #include <time.h>
 
-#define Version_string "1.30 (15 Jun 2025)"
+#define Version_string "1.31 (25 Oct 2025)"
 
 #define computers_turn()                                                       \
   (isoption(arciswhite | blacksturn) == arciswhite ||                          \
